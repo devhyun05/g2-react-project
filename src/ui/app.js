@@ -1,5 +1,12 @@
-import { bindControls, renderChecklist, setStatusText, syncHistoryButtons } from "./bindings.js";
-import { fallbackMessages, manualQaChecklist } from "./fixtures.js";
+import {
+  bindControls,
+  renderHistoryLog,
+  renderPatchLog,
+  renderVNodeTree,
+  setStatusText,
+  syncHistoryButtons,
+} from "./bindings.js";
+import { fallbackMessages } from "./fixtures.js";
 
 const elementIds = {
   realRoot: "real-root",
@@ -8,7 +15,8 @@ const elementIds = {
   undoButton: "undo-button",
   redoButton: "redo-button",
   statusText: "status-text",
-  qaChecklist: "qa-checklist",
+  vnodeTree: "vnode-tree",
+  patchLog: "patch-log",
 };
 
 async function loadCoreModules() {
@@ -74,14 +82,49 @@ function getRootNode(container) {
 }
 
 /**
+ * @param {unknown} vnode
+ * @param {(vnode: unknown, container: HTMLElement) => Node} render
+ * @returns {string}
+ */
+function vnodeToHTML(vnode, render) {
+  const container = document.createElement("div");
+  render(cloneValue(vnode), container);
+  return container.innerHTML.trim();
+}
+
+/**
+ * @param {string} html
+ * @returns {Node}
+ */
+function parseHTMLRoot(html) {
+  const template = document.createElement("template");
+  template.innerHTML = html.trim();
+
+  const nodes = Array.from(template.content.childNodes).filter((node) => {
+    if (node.nodeType !== Node.TEXT_NODE) {
+      return true;
+    }
+
+    return node.textContent?.trim();
+  });
+
+  if (nodes.length !== 1) {
+    throw new Error(fallbackMessages.invalidHtmlRoot);
+  }
+
+  return nodes[0];
+}
+
+/**
  * @param {{
  *   realRoot: HTMLElement,
- *   testRoot: HTMLElement,
+ *   testRoot: HTMLTextAreaElement,
+ *   vnodeTree: HTMLElement,
+ *   patchLog: HTMLElement,
  *   patchButton: HTMLButtonElement,
  *   undoButton: HTMLButtonElement,
  *   redoButton: HTMLButtonElement,
- *   statusText: HTMLElement,
- *   qaChecklist: HTMLElement
+ *   statusText: HTMLElement
  * }} elements
  * @param {{
  *   domToVNode: (domNode: Node) => unknown,
@@ -108,32 +151,60 @@ function createPlayground(elements, core) {
     );
   }
 
+  function renderTree(vnode) {
+    renderVNodeTree(elements.vnodeTree, vnode);
+  }
+
   function renderBoth(vnode) {
     core.render(cloneValue(vnode), elements.realRoot);
-    core.render(cloneValue(vnode), elements.testRoot);
+    elements.testRoot.value = vnodeToHTML(vnode, core.render);
+    renderTree(vnode);
   }
 
   function initialize() {
     const initialVNode = core.domToVNode(getRootNode(elements.realRoot));
-    core.render(cloneValue(initialVNode), elements.testRoot);
+    elements.testRoot.value = vnodeToHTML(initialVNode, core.render);
     history = core.createHistory(cloneValue(initialVNode));
+    renderTree(initialVNode);
+    renderPatchLog(elements.patchLog, []);
     syncButtons();
     setStatusText(elements.statusText, fallbackMessages.ready);
   }
 
   function handlePatch() {
-    const previousVNode = core.getCurrentVNode(history);
-    const nextVNode = core.domToVNode(getRootNode(elements.testRoot));
-    const patches = core.diff(previousVNode, nextVNode);
+    try {
+      const previousVNode = core.getCurrentVNode(history);
+      const nextRootNode = parseHTMLRoot(elements.testRoot.value);
+      const nextVNode = core.domToVNode(nextRootNode);
+      const patches = core.diff(previousVNode, nextVNode);
 
-    console.log("[Patch]", patches);
-    core.applyPatches(getRootNode(elements.realRoot), patches);
-    history = core.pushHistory(history, cloneValue(nextVNode));
-    syncButtons();
-    setStatusText(elements.statusText, fallbackMessages.patchApplied(patches.length));
+      console.log("[Patch]", patches);
+
+      if (patches.length === 0) {
+        renderPatchLog(elements.patchLog, patches);
+        renderTree(nextVNode);
+        setStatusText(elements.statusText, fallbackMessages.noPatchChanges);
+        return;
+      }
+
+      core.applyPatches(getRootNode(elements.realRoot), patches);
+      history = core.pushHistory(history, cloneValue(nextVNode));
+      elements.testRoot.value = vnodeToHTML(nextVNode, core.render);
+      renderTree(nextVNode);
+      renderPatchLog(elements.patchLog, patches);
+      syncButtons();
+      setStatusText(elements.statusText, fallbackMessages.patchApplied(patches.length));
+    } catch (error) {
+      console.error("[Patch Parse Error]", error);
+      setStatusText(
+        elements.statusText,
+        error instanceof Error ? error.message : fallbackMessages.invalidHtmlParse,
+      );
+    }
   }
 
   function handleUndo() {
+    const previousIndex = history.index;
     const nextHistory = core.undoHistory(history);
 
     if (nextHistory.index === history.index) {
@@ -141,13 +212,16 @@ function createPlayground(elements, core) {
       return;
     }
 
+    const nextVNode = core.getCurrentVNode(nextHistory);
     history = nextHistory;
-    renderBoth(core.getCurrentVNode(history));
+    renderBoth(nextVNode);
+    renderHistoryLog(elements.patchLog, "뒤로가기", previousIndex, nextHistory.index);
     syncButtons();
     setStatusText(elements.statusText, fallbackMessages.undoApplied);
   }
 
   function handleRedo() {
+    const previousIndex = history.index;
     const nextHistory = core.redoHistory(history);
 
     if (nextHistory.index === history.index) {
@@ -155,8 +229,10 @@ function createPlayground(elements, core) {
       return;
     }
 
+    const nextVNode = core.getCurrentVNode(nextHistory);
     history = nextHistory;
-    renderBoth(core.getCurrentVNode(history));
+    renderBoth(nextVNode);
+    renderHistoryLog(elements.patchLog, "앞으로가기", previousIndex, nextHistory.index);
     syncButtons();
     setStatusText(elements.statusText, fallbackMessages.redoApplied);
   }
@@ -190,15 +266,16 @@ function getRequiredElement(id) {
 async function main() {
   const elements = {
     realRoot: /** @type {HTMLElement} */ (getRequiredElement(elementIds.realRoot)),
-    testRoot: /** @type {HTMLElement} */ (getRequiredElement(elementIds.testRoot)),
+    testRoot: /** @type {HTMLTextAreaElement} */ (getRequiredElement(elementIds.testRoot)),
+    vnodeTree: /** @type {HTMLElement} */ (getRequiredElement(elementIds.vnodeTree)),
+    patchLog: /** @type {HTMLElement} */ (getRequiredElement(elementIds.patchLog)),
     patchButton: /** @type {HTMLButtonElement} */ (getRequiredElement(elementIds.patchButton)),
     undoButton: /** @type {HTMLButtonElement} */ (getRequiredElement(elementIds.undoButton)),
     redoButton: /** @type {HTMLButtonElement} */ (getRequiredElement(elementIds.redoButton)),
     statusText: /** @type {HTMLElement} */ (getRequiredElement(elementIds.statusText)),
-    qaChecklist: /** @type {HTMLElement} */ (getRequiredElement(elementIds.qaChecklist)),
   };
 
-  renderChecklist(elements.qaChecklist, manualQaChecklist);
+  renderPatchLog(elements.patchLog, []);
   syncHistoryButtons(
     {
       undoButton: elements.undoButton,
@@ -216,6 +293,8 @@ async function main() {
     elements.patchButton.disabled = true;
     elements.undoButton.disabled = true;
     elements.redoButton.disabled = true;
+    renderVNodeTree(elements.vnodeTree, null);
+    renderPatchLog(elements.patchLog, []);
     setStatusText(elements.statusText, fallbackMessages.importError);
   }
 }

@@ -3,23 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VDOM Playground</title>
+    <title>team2 virtual DOM simulator</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <main class="app-shell">
       <header class="hero">
-        <div>
-          <p class="eyebrow">Cycle 1 Playground</p>
-          <h1>Virtual DOM Patch Playground</h1>
+        <div class="hero-copy-block">
+          <p class="eyebrow">Cycle 1 Demo</p>
+          <h1>team2 virtual DOM simulator</h1>
           <p class="hero-copy">
-            실제 DOM과 테스트 DOM을 나란히 두고 patch, undo, redo 흐름을 직접 확인합니다.
+            실제 DOM, 테스트 HTML, patch 결과를 한 화면에서 확인합니다.
           </p>
-        </div>
-        <div class="controls" aria-label="플레이그라운드 컨트롤">
-          <button id="patch-button" type="button">Patch</button>
-          <button id="undo-button" type="button">Undo</button>
-          <button id="redo-button" type="button">Redo</button>
         </div>
       </header>
 
@@ -27,15 +22,28 @@
         <span id="status-text">초기화 중...</span>
       </section>
 
+      <section class="control-bar panel" aria-label="플레이그라운드 컨트롤">
+        <div class="panel-header">
+          <h2>실행 버튼</h2>
+          <span>Patch / History</span>
+        </div>
+        <div class="panel-body controls">
+          <button id="patch-button" type="button">Patch</button>
+          <button id="undo-button" type="button">뒤로가기</button>
+          <button id="redo-button" type="button">앞으로가기</button>
+        </div>
+      </section>
+
       <section class="playground-grid">
         <article class="panel">
           <div class="panel-header">
             <h2>Real DOM</h2>
-            <span>patch 대상</span>
+            <span>실제 영역</span>
           </div>
           <div class="panel-body">
             <div id="real-root" class="surface">
               <section class="card" data-kind="article">
+                <p class="badge">Actual DOM</p>
                 <h3>오늘의 메뉴</h3>
                 <p class="lead">김치볶음밥</p>
                 <ul class="items">
@@ -50,15 +58,14 @@
         <article class="panel">
           <div class="panel-header">
             <h2>Test DOM</h2>
-            <span>여기를 직접 수정</span>
+            <span>테스트 HTML 코드</span>
           </div>
           <div class="panel-body">
-            <div
+            <textarea
               id="test-root"
-              class="surface editable"
-              contenteditable="true"
+              class="surface code-editor"
               spellcheck="false"
-            ></div>
+            ></textarea>
           </div>
         </article>
       </section>
@@ -66,26 +73,21 @@
       <section class="notes-grid">
         <article class="panel">
           <div class="panel-header">
-            <h2>Manual QA</h2>
-            <span>체크리스트</span>
+            <h2>VNode Tree</h2>
+            <span>Test DOM 기준</span>
           </div>
           <div class="panel-body">
-            <ul id="qa-checklist" class="qa-list"></ul>
+            <div id="vnode-tree" class="tree-surface">트리 정보를 준비 중입니다.</div>
           </div>
         </article>
 
         <article class="panel">
           <div class="panel-header">
-            <h2>사용 방법</h2>
-            <span>Cycle 1</span>
+            <h2>Patch Log</h2>
+            <span>변경된 부분</span>
           </div>
-          <div class="panel-body usage">
-            <ol>
-              <li>초기 로드 시 real DOM을 읽어 test 영역에 복제합니다.</li>
-              <li>test 영역의 텍스트, 속성, 자식 구조를 직접 수정합니다.</li>
-              <li>`Patch`를 눌러 real 영역에 patch를 적용합니다.</li>
-              <li>`Undo`, `Redo`로 history snapshot 이동을 확인합니다.</li>
-            </ol>
+          <div class="panel-body">
+            <pre id="patch-log" class="patch-log">아직 patch가 실행되지 않았습니다.</pre>
           </div>
         </article>
       </section>

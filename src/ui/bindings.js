@@ -29,16 +29,97 @@ export function setStatusText(target, message) {
  * @param {HTMLElement} target
  * @param {string[]} checklist
  */
-export function renderChecklist(target, checklist) {
-  const fragment = document.createDocumentFragment();
+export function renderPatchLog(target, patches) {
+  if (!Array.isArray(patches) || patches.length === 0) {
+    target.textContent = "변경된 patch가 없습니다.";
+    return;
+  }
 
-  checklist.forEach((item) => {
-    const li = document.createElement("li");
-    li.textContent = item;
-    fragment.appendChild(li);
-  });
+  target.textContent = patches
+    .map((patch, index) => `${index + 1}. ${JSON.stringify(patch, null, 2)}`)
+    .join("\n\n");
+}
 
-  target.replaceChildren(fragment);
+/**
+ * history 이동 로그를 화면에 렌더한다.
+ *
+ * @param {HTMLElement} target
+ * @param {string} action
+ * @param {number} fromIndex
+ * @param {number} toIndex
+ */
+export function renderHistoryLog(target, action, fromIndex, toIndex) {
+  target.textContent = [
+    `${action}: state history 이동`,
+    `from index: ${fromIndex}`,
+    `to index: ${toIndex}`,
+    "실제 영역과 테스트 영역이 해당 Virtual DOM 상태로 함께 동기화되었습니다.",
+  ].join("\n");
+}
+
+/**
+ * VNode 트리를 화면에 렌더한다.
+ *
+ * @param {HTMLElement} target
+ * @param {unknown} vnode
+ */
+export function renderVNodeTree(target, vnode) {
+  target.replaceChildren(createVNodeTreeElement(vnode));
+}
+
+/**
+ * @param {unknown} vnode
+ * @returns {HTMLElement}
+ */
+function createVNodeTreeElement(vnode) {
+  const root = document.createElement("div");
+  root.className = "vnode-tree-empty";
+
+  if (!vnode || typeof vnode !== "object") {
+    root.textContent = "(empty)";
+    return root;
+  }
+
+  const list = document.createElement("ul");
+  list.className = "vnode-tree";
+  list.appendChild(createVNodeTreeItem(vnode));
+  return list;
+}
+
+/**
+ * @param {unknown} vnode
+ * @returns {HTMLLIElement}
+ */
+function createVNodeTreeItem(vnode) {
+  const item = document.createElement("li");
+  const type = typeof vnode.type === "string" ? vnode.type : "UNKNOWN";
+  const props = vnode.props && typeof vnode.props === "object" ? vnode.props : {};
+  const children = Array.isArray(vnode.children) ? vnode.children : [];
+
+  const node = document.createElement("div");
+  node.className = "tree-node";
+
+  const dot = document.createElement("span");
+  dot.className = "tree-dot";
+  dot.setAttribute("aria-hidden", "true");
+
+  const label = document.createElement("span");
+  label.className = "tree-label";
+  label.textContent =
+    Object.keys(props).length > 0 ? `${type} ${JSON.stringify(props)}` : type;
+
+  node.append(dot, label);
+  item.appendChild(node);
+
+  if (children.length > 0) {
+    const childList = document.createElement("ul");
+    children.forEach((child) => {
+      childList.appendChild(createVNodeTreeItem(child));
+    });
+    item.appendChild(childList);
+  }
+
+  return item;
 }
 
 /**

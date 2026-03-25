@@ -47,12 +47,14 @@ textarea {
 }
 
 .hero {
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px;
+  display: block;
+  padding: 30px;
   border-radius: 24px;
   margin-bottom: 18px;
+}
+
+.hero-copy-block {
+  min-width: 0;
 }
 
 .eyebrow {
@@ -120,6 +122,10 @@ textarea {
   gap: 18px;
 }
 
+.control-bar {
+  margin-bottom: 18px;
+}
+
 .playground-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-bottom: 18px;
@@ -169,9 +175,21 @@ textarea {
   cursor: text;
 }
 
-.editable:focus {
+.editable:focus,
+.code-editor:focus {
   border-color: rgba(179, 85, 45, 0.35);
   box-shadow: inset 0 0 0 1px rgba(179, 85, 45, 0.18);
+}
+
+.code-editor {
+  width: 100%;
+  resize: vertical;
+  outline: none;
+  cursor: text;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  white-space: pre;
 }
 
 .card {
@@ -179,6 +197,19 @@ textarea {
   padding: 20px;
   background: linear-gradient(180deg, #fffaf4 0%, #f7efe4 100%);
   border: 1px solid rgba(118, 102, 89, 0.14);
+}
+
+.badge {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(47, 36, 27, 0.08);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .card h3 {
@@ -196,23 +227,143 @@ textarea {
   padding-left: 20px;
 }
 
-.qa-list,
-.usage ol {
+.usage ol,
+.patch-log {
   margin: 0;
   padding-left: 20px;
   line-height: 1.7;
 }
 
-.usage li + li,
-.qa-list li + li {
+.usage li + li {
   margin-top: 8px;
 }
 
-@media (max-width: 960px) {
-  .hero {
-    flex-direction: column;
-  }
+.patch-log {
+  min-height: 240px;
+  padding: 16px;
+  overflow: auto;
+  border-radius: 16px;
+  background: #2f241b;
+  color: #fff6eb;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
 
+.tree-surface {
+  min-height: 240px;
+  padding: 20px 12px 8px;
+  overflow: auto;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top, rgba(179, 85, 45, 0.08), transparent 38%),
+    #fffdf9;
+  border: 1px solid rgba(98, 72, 52, 0.12);
+}
+
+.vnode-tree,
+.vnode-tree ul {
+  position: relative;
+  margin: 0;
+  padding-top: 28px;
+  padding-left: 0;
+  display: flex;
+  justify-content: center;
+  list-style: none;
+}
+
+.vnode-tree ul {
+  gap: 10px;
+}
+
+.vnode-tree li {
+  position: relative;
+  padding: 28px 10px 0;
+  text-align: center;
+}
+
+.vnode-tree li::before,
+.vnode-tree li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 28px;
+  border-top: 2px solid rgba(77, 121, 181, 0.5);
+}
+
+.vnode-tree li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid rgba(77, 121, 181, 0.5);
+}
+
+.vnode-tree li:only-child::before,
+.vnode-tree li:only-child::after {
+  display: none;
+}
+
+.vnode-tree li:only-child {
+  padding-top: 0;
+}
+
+.vnode-tree li:first-child::before,
+.vnode-tree li:last-child::after {
+  border: 0;
+}
+
+.vnode-tree li:last-child::before {
+  border-right: 2px solid rgba(77, 121, 181, 0.5);
+  border-radius: 0 14px 0 0;
+}
+
+.vnode-tree li:first-child::after {
+  border-radius: 14px 0 0 0;
+}
+
+.vnode-tree ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 28px;
+  border-left: 2px solid rgba(77, 121, 181, 0.5);
+}
+
+.tree-node {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 96px;
+}
+
+.tree-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #4d79b5;
+  box-shadow: 0 0 0 6px rgba(77, 121, 181, 0.14);
+}
+
+.tree-label {
+  display: inline-block;
+  max-width: 180px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 250, 244, 0.96);
+  border: 1px solid rgba(98, 72, 52, 0.12);
+  color: var(--text);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+@media (max-width: 960px) {
   .playground-grid,
   .notes-grid {
     grid-template-columns: 1fr;
