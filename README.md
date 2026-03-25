@@ -36,6 +36,54 @@ diff는 이전 트리와 다음 트리를 재귀적으로 비교하면서 patch 
 
 children 비교는 index 기반뿐 아니라 key 기반 방식도 함께 검토하고 구현했다. key를 탐색해 매칭하는 과정 자체는 비교적 단순했지만, 각 태그에 안정적인 key를 부여하고 그 규칙을 전체 렌더링 흐름에서 일관되게 유지하는 부분이 더 어려웠다. 그래서 이번 프로젝트에서는 구현 복잡도가 낮고 구조를 예측하기 쉬운 index 기반 방식을 기본으로 채택하되, key 기반 비교도 별도로 확장 가능하도록 설계했다.
 
+
+## 대표 테스트 케이스
+
+### 일반 케이스
+
+- DOM -> VNode -> DOM 변환이 정상적으로 왕복되는지
+- text 변경 시 `TEXT` patch가 정확히 생성되는지
+- prop 변경과 제거가 `SET_PROP`, `REMOVE_PROP`으로 분리되는지
+- child 추가/삭제 시 index 기반 path가 올바르게 계산되는지
+- patch 적용 후 real DOM이 target DOM과 같아지는지
+- undo / redo 시 history index와 현재 상태가 일치하는지
+- patch 버튼 실행 후 real DOM, test DOM, patch log가 함께 갱신되는지
+
+### 극단적인 케이스
+
+가장 극단적인 경우는 아래 네 가지로 추려서 확인했다.
+
+- 빈 문자열과 공백 텍스트가 사라지지 않는지
+- 매우 깊은 path에서도 정확한 노드를 찾을 수 있는지
+- root 노드 교체가 wrapper를 깨뜨리지 않고 안전하게 되는지
+- 큰 중첩 트리와 반복 patch 상황에서도 최종 결과가 틀어지지 않는지
+
+### 엣지 케이스
+
+- comment node, null 입력, 지원하지 않는 노드 입력을 안전하게 처리하는지
+- event prop과 event-like attribute를 diff와 DOM 반영에서 무시하는지
+- 잘못된 path나 비정상 payload가 들어와도 DOM이 깨지지 않는지
+- undo 후 새 상태를 push했을 때 future history가 잘리는지
+- 외부에서 snapshot을 바꿔도 history 내부 상태가 오염되지 않는지
+- 빠르게 연속 클릭해도 핸들러 순서가 꼬이지 않는지
+- 반복적인 render / history churn 이후에도 상태가 안정적으로 유지되는지
+
+이 테스트들은 단순히 "돌아간다"를 확인하는 수준이 아니라, 흔들리기 쉬운 조건에서도 구조가 안전한지 확인하는 데 초점을 맞췄다.
+
+## 작업 시간
+
+```mermaid
+pie showData
+    title 작업 시간 분포
+    "10:00 ~ 11:00 계획 세우기" : 60
+    "11:00 ~ 12:00 agents.md / helper md 구성" : 60
+    "13:30 ~ 16:00 cycle 1 구현" : 150
+    "16:00 ~ 17:12 cycle 1 테스트 및 수정" : 72
+    "19:00 ~ 20:37 cycle 2 테스트 케이스 생성" : 97
+    "20:37 ~ 22:00 cycle 2 테스트 및 수정" : 83
+    "22:00 ~ 23:00 디버깅 및 전체 테스트" : 60
+```
+
 ## 팀 구성
 
 | 담당 | 역할 | 맡은 파트 |
@@ -121,53 +169,6 @@ undo는 index를 뒤로, redo는 앞으로 옮긴다. 그리고 undo 이후 새 
 | Concurrency-like / Load Test | 빠른 연속 실행, 큰 입력, 반복 churn에서도 안정적인지 확인 |
 
 추가로 외부 라이브러리 없이 바로 돌릴 수 있도록 경량 테스트 러너와 fake DOM 환경도 같이 만들었다.
-
-## 대표 테스트 케이스
-
-### 일반 케이스
-
-- DOM -> VNode -> DOM 변환이 정상적으로 왕복되는지
-- text 변경 시 `TEXT` patch가 정확히 생성되는지
-- prop 변경과 제거가 `SET_PROP`, `REMOVE_PROP`으로 분리되는지
-- child 추가/삭제 시 index 기반 path가 올바르게 계산되는지
-- patch 적용 후 real DOM이 target DOM과 같아지는지
-- undo / redo 시 history index와 현재 상태가 일치하는지
-- patch 버튼 실행 후 real DOM, test DOM, patch log가 함께 갱신되는지
-
-### 극단적인 케이스
-
-가장 극단적인 경우는 아래 네 가지로 추려서 확인했다.
-
-- 빈 문자열과 공백 텍스트가 사라지지 않는지
-- 매우 깊은 path에서도 정확한 노드를 찾을 수 있는지
-- root 노드 교체가 wrapper를 깨뜨리지 않고 안전하게 되는지
-- 큰 중첩 트리와 반복 patch 상황에서도 최종 결과가 틀어지지 않는지
-
-### 엣지 케이스
-
-- comment node, null 입력, 지원하지 않는 노드 입력을 안전하게 처리하는지
-- event prop과 event-like attribute를 diff와 DOM 반영에서 무시하는지
-- 잘못된 path나 비정상 payload가 들어와도 DOM이 깨지지 않는지
-- undo 후 새 상태를 push했을 때 future history가 잘리는지
-- 외부에서 snapshot을 바꿔도 history 내부 상태가 오염되지 않는지
-- 빠르게 연속 클릭해도 핸들러 순서가 꼬이지 않는지
-- 반복적인 render / history churn 이후에도 상태가 안정적으로 유지되는지
-
-이 테스트들은 단순히 "돌아간다"를 확인하는 수준이 아니라, 흔들리기 쉬운 조건에서도 구조가 안전한지 확인하는 데 초점을 맞췄다.
-
-## 작업 시간
-
-```mermaid
-pie showData
-    title 작업 시간 분포
-    "10:00 ~ 11:00 계획 세우기" : 60
-    "11:00 ~ 12:00 agents.md / helper md 구성" : 60
-    "13:30 ~ 16:00 cycle 1 구현" : 150
-    "16:00 ~ 17:12 cycle 1 테스트 및 수정" : 72
-    "19:00 ~ 20:37 cycle 2 테스트 케이스 생성" : 97
-    "20:37 ~ 22:00 cycle 2 테스트 및 수정" : 83
-    "22:00 ~ 23:00 디버깅 및 전체 테스트" : 60
-```
 
 ## 품질 검증 포인트
 
