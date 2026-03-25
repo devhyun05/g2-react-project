@@ -1,10 +1,6 @@
 import { NODE_KIND } from "./types.js";
 
 /**
- * @typedef {import("./types.js").NODE_KIND} NODE_KIND
- */
-
-/**
  * @typedef {Object} VNode
  * @property {"ELEMENT"|"TEXT"} nodeKind
  * @property {string} type
@@ -84,17 +80,28 @@ function diffNode(oldNode, newNode, path, patches) {
   }
 
   if (oldNode == null) {
-    patches.push({ kind: "CREATE", path: [...path], node: newNode });
+    patches.push({
+      kind: "CREATE",
+      path: [...path],
+      node: newNode,
+    });
     return;
   }
 
   if (newNode == null) {
-    patches.push({ kind: "REMOVE", path: [...path] });
+    patches.push({
+      kind: "REMOVE",
+      path: [...path],
+    });
     return;
   }
 
   if (oldNode.nodeKind !== newNode.nodeKind || oldNode.type !== newNode.type) {
-    patches.push({ kind: "REPLACE", path: [...path], node: newNode });
+    patches.push({
+      kind: "REPLACE",
+      path: [...path],
+      node: newNode,
+    });
     return;
   }
 
@@ -122,6 +129,11 @@ function diffNode(oldNode, newNode, path, patches) {
 function diffProps(oldNode, newNode, path, patches) {
   const oldProps = oldNode.props || {};
   const newProps = newNode.props || {};
+
+  if (oldProps === newProps) {
+    return;
+  }
+
   const keys = new Set([...Object.keys(oldProps), ...Object.keys(newProps)]);
 
   for (const key of keys) {
@@ -136,7 +148,11 @@ function diffProps(oldNode, newNode, path, patches) {
     }
 
     if (!(key in newProps)) {
-      patches.push({ kind: "REMOVE_PROP", path: [...path], key });
+      patches.push({
+        kind: "REMOVE_PROP",
+        path: [...path],
+        key,
+      });
       continue;
     }
 
@@ -160,21 +176,26 @@ function diffProps(oldNode, newNode, path, patches) {
 function diffChildren(oldNode, newNode, path, patches) {
   const oldChildren = oldNode.children || [];
   const newChildren = newNode.children || [];
-  const count = Math.max(oldChildren.length, newChildren.length);
+  const oldLen = oldChildren.length;
+  const newLen = newChildren.length;
+  const count = oldLen > newLen ? oldLen : newLen;
 
   for (let i = 0; i < count; i += 1) {
-    const childPath = [...path, i];
+    path.push(i);
 
-    if (i >= oldChildren.length) {
-      diffNode(null, newChildren[i], childPath, patches);
+    if (i >= oldLen) {
+      diffNode(null, newChildren[i], path, patches);
+      path.pop();
       continue;
     }
 
-    if (i >= newChildren.length) {
-      diffNode(oldChildren[i], null, childPath, patches);
+    if (i >= newLen) {
+      diffNode(oldChildren[i], null, path, patches);
+      path.pop();
       continue;
     }
 
-    diffNode(oldChildren[i], newChildren[i], childPath, patches);
+    diffNode(oldChildren[i], newChildren[i], path, patches);
+    path.pop();
   }
 }
