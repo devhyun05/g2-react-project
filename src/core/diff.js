@@ -1,5 +1,4 @@
 const TEXT_KIND = "TEXT";
-const ELEMENT_KIND = "ELEMENT";
 
 const OWN = Object.prototype.hasOwnProperty;
 const EVENT_PREFIX = "on";
@@ -25,14 +24,14 @@ function walk(oldNode, newNode, path, patches) {
     return;
   }
 
-  const oldKind = getNodeKind(oldNode);
-  const newKind = getNodeKind(newNode);
+  const oldKind = oldNode.type === TEXT_KIND;
+  const newKind = newNode.type === TEXT_KIND;
   if (oldKind !== newKind || oldNode.type !== newNode.type) {
     patches.push({ kind: "REPLACE", path: path.slice(), node: newNode });
     return;
   }
 
-  if (oldKind === TEXT_KIND) {
+  if (oldKind) {
     const oldText = getTextValue(oldNode);
     const newText = getTextValue(newNode);
     if (oldText !== newText) {
@@ -82,11 +81,6 @@ function diffProps(oldNode, newNode, path, patches) {
       patches.push({ kind: "SET_PROP", path: path.slice(), key, value: String(newProps[key] ?? "") });
     }
   }
-}
-
-function getNodeKind(vnode) {
-  if (vnode && vnode.type === TEXT_KIND) return TEXT_KIND;
-  return ELEMENT_KIND;
 }
 
 function getTextValue(vnode) {
