@@ -15,41 +15,14 @@ function isEventProp(key) {
 }
 
 /**
- * @param {unknown} patch
- * @returns {string|null}
+ * @param {unknown} path
+ * @returns {path is number[]}
  */
-function getPatchType(patch) {
-  if (!patch || typeof patch !== "object") return null;
-  if (typeof patch.type === "string") return patch.type;
-  if (typeof patch.kind === "string") return patch.kind;
-  return null;
-}
-
-/**
- * @param {unknown} patch
- * @returns {any}
- */
-function getPatchNode(patch) {
-  if (!patch || typeof patch !== "object") return null;
-  return patch.node ?? patch.vnode ?? patch.payload?.node ?? null;
-}
-
-/**
- * @param {unknown} patch
- * @returns {string}
- */
-function getPatchText(patch) {
-  if (!patch || typeof patch !== "object") return "";
-
-  if (typeof patch.text === "string") return patch.text;
-  if (typeof patch.payload?.text === "string") return patch.payload.text;
-
-  const node = getPatchNode(patch);
-  if (node && node.type === "TEXT" && node.props && typeof node.props.nodeValue !== "undefined") {
-    return String(node.props.nodeValue);
-  }
-
-  return "";
+function isValidPath(path) {
+  return (
+    Array.isArray(path) &&
+    path.every((index) => Number.isInteger(index) && index >= 0)
+  );
 }
 
 /**
@@ -125,9 +98,11 @@ function getParentNodeByPath(rootEl, path) {
  * @param {any} patch
  */
 function applyCreatePatch(rootEl, patch) {
-  const path = Array.isArray(patch.path) ? patch.path : [];
-  const vnode = getPatchNode(patch);
-  if (!vnode) return;
+  if (!isValidPath(patch.path)) return;
+  if (!patch.node || typeof patch.node !== "object") return;
+
+  const path = patch.path;
+  const vnode = patch.node;
 
   const newNode = createDOMNodeFromVNode(vnode);
 
@@ -158,7 +133,9 @@ function applyCreatePatch(rootEl, patch) {
  * @param {any} patch
  */
 function applyRemovePatch(rootEl, patch) {
-  const target = getDOMNodeByPath(rootEl, Array.isArray(patch.path) ? patch.path : []);
+  if (!isValidPath(patch.path)) return;
+  const target = getDOMNodeByPath(rootEl, patch.path);
+
   if (target && target.parentNode) {
     target.parentNode.removeChild(target);
   }
@@ -169,9 +146,11 @@ function applyRemovePatch(rootEl, patch) {
  * @param {any} patch
  */
 function applyReplacePatch(rootEl, patch) {
-  const path = Array.isArray(patch.path) ? patch.path : [];
-  const vnode = getPatchNode(patch);
-  if (!vnode) return;
+  if (!isValidPath(patch.path)) return;
+  if (!patch.node || typeof patch.node !== "object") return;
+
+  const path = patch.path;
+  const vnode = patch.node;
 
   const newNode = createDOMNodeFromVNode(vnode);
   const target = getDOMNodeByPath(rootEl, path);
@@ -196,10 +175,11 @@ function applyReplacePatch(rootEl, patch) {
  * @param {any} patch
  */
 function applyTextPatch(rootEl, patch) {
-  const target = getDOMNodeByPath(rootEl, Array.isArray(patch.path) ? patch.path : []);
+  if (!isValidPath(patch.path)) return;
+  const target = getDOMNodeByPath(rootEl, patch.path);
   if (!target) return;
 
-  const nextText = getPatchText(patch);
+  const nextText = patch.text == null ? "" : String(patch.text);
   if (target.nodeType === 3) {
     target.nodeValue = nextText;
   } else {
@@ -212,11 +192,12 @@ function applyTextPatch(rootEl, patch) {
  * @param {any} patch
  */
 function applySetPropPatch(rootEl, patch) {
-  const target = getDOMNodeByPath(rootEl, Array.isArray(patch.path) ? patch.path : []);
+  if (!isValidPath(patch.path)) return;
+  const target = getDOMNodeByPath(rootEl, patch.path);
   if (!target || target.nodeType !== 1) return;
 
-  const key = patch.key ?? patch.payload?.key;
-  const value = patch.value ?? patch.payload?.value;
+  const key = patch.key;
+  const value = patch.value;
   if (typeof key !== "string" || typeof value === "undefined" || value === null) return;
   if (isEventProp(key)) return;
 
@@ -228,10 +209,11 @@ function applySetPropPatch(rootEl, patch) {
  * @param {any} patch
  */
 function applyRemovePropPatch(rootEl, patch) {
-  const target = getDOMNodeByPath(rootEl, Array.isArray(patch.path) ? patch.path : []);
+  if (!isValidPath(patch.path)) return;
+  const target = getDOMNodeByPath(rootEl, patch.path);
   if (!target || target.nodeType !== 1) return;
 
-  const key = patch.key ?? patch.payload?.key;
+  const key = patch.key;
   if (typeof key !== "string") return;
   if (isEventProp(key)) return;
 
@@ -248,9 +230,10 @@ export function applyPatches(rootEl, patches) {
   if (!rootEl || !Array.isArray(patches)) return;
 
   for (const patch of patches) {
-    const patchType = getPatchType(patch);
+    if (!patch || typeof patch !== "object") continue;
+    if (typeof patch.kind !== "string") continue;
 
-    switch (patchType) {
+    switch (patch.kind) {
       case "CREATE":
         applyCreatePatch(rootEl, patch);
         break;
