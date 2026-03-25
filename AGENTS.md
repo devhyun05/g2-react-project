@@ -14,6 +14,7 @@
 3. `docs/development-plan.md`
 4. `docs/commit-convention.md`
 5. `docs/vnode-spec-v1.0.md`
+6. `docs/text-node-rules-v1.0.md`
 
 문서를 읽지 않은 상태에서 구현을 시작하지 않는다.
 
