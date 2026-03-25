@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+export const NODE_KIND = {
+  ELEMENT: "ELEMENT",
+  TEXT: "TEXT",
+};
+=======
+export const NODE_KIND = {
+  ELEMENT: "ELEMENT",
+  TEXT: "TEXT",
+};
+
 export const TEXT_NODE_TYPE = "TEXT";
 export const NODE_KIND = {
   ELEMENT: "ELEMENT",
@@ -12,14 +23,6 @@ function normalizeChildren(children) {
   return Array.isArray(children) ? children : [];
 }
 
-/**
- * Creates a VNode that follows the team's `{ type, props, children }` contract.
- *
- * @param {string} type
- * @param {Record<string, string>} [props={}]
- * @param {Array} [children=[]]
- * @returns {{ type: string, props: Record<string, string>, children: Array }}
- */
 export function createVNode(type, props = {}, children = []) {
   return {
     type,
@@ -28,12 +31,7 @@ export function createVNode(type, props = {}, children = []) {
   };
 }
 
-/**
- * Creates a TEXT VNode with the required `props.nodeValue` field.
- *
- * @param {string | number} [nodeValue=""]
- * @returns {{ type: string, props: { nodeValue: string }, children: [] }}
- */
 export function createTextVNode(nodeValue = "") {
   return createVNode(TEXT_NODE_TYPE, { nodeValue: String(nodeValue) }, []);
 }
+>>>>>>> 550e3a751aa6171421e2d0fb29dc0d520583f7ee
