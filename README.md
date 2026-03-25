@@ -1,4 +1,4 @@
-<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/a232105f-7869-4f86-838f-0dbc06ba95e6" />
+<img width="200" height="200" alt="qrcode_325073523_b54e839c304fb738f5e960e7156751aa (2)" src="https://github.com/user-attachments/assets/edb413ad-b4aa-4262-a05f-66bebd9428e3" />
 
 # 2조 Virtual DOM Simulator
 
