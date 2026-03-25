@@ -2,7 +2,6 @@ import { NODE_KIND, VNODE_TEXT_PROP } from "./types.js";
 
 const OWN = Object.prototype.hasOwnProperty;
 const EVENT_PREFIX = "on";
-const TEXT_PROP = VNODE_TEXT_PROP;
 
 export function diff(oldVNode, newVNode) {
   const patches = [];
@@ -27,15 +26,14 @@ function walk(oldNode, newNode, path, patches) {
 
   const oldKind = getNodeKind(oldNode);
   const newKind = getNodeKind(newNode);
-
   if (oldKind !== newKind || oldNode.type !== newNode.type) {
     patches.push({ kind: "REPLACE", path: path.slice(), node: newNode });
     return;
   }
 
   if (oldKind === NODE_KIND.TEXT) {
-    const oldText = getNodeText(oldNode);
-    const newText = getNodeText(newNode);
+    const oldText = getTextValue(oldNode);
+    const newText = getTextValue(newNode);
     if (oldText !== newText) {
       patches.push({ kind: "TEXT", path: path.slice(), text: newText });
     }
@@ -58,53 +56,48 @@ function walk(oldNode, newNode, path, patches) {
 function diffProps(oldNode, newNode, path, patches) {
   const oldProps = oldNode.props || {};
   const newProps = newNode.props || {};
+
   const oldKeys = Object.keys(oldProps);
   const newKeys = Object.keys(newProps);
-  const changed = [];
 
   for (let i = 0; i < oldKeys.length; i += 1) {
     const key = oldKeys[i];
     if (isEventHandlerProp(key)) continue;
-
     if (!OWN.call(newProps, key)) {
-      changed.push({ kind: "REMOVE_PROP", path: path.slice(), key });
+      patches.push({ kind: "REMOVE_PROP", path: path.slice(), key });
       continue;
     }
-
     const oldValue = oldProps[key];
     const newValue = newProps[key];
     if (oldValue !== newValue) {
-      changed.push({ kind: "SET_PROP", path: path.slice(), key, value: newValue });
+      patches.push({ kind: "SET_PROP", path: path.slice(), key, value: newValue });
     }
   }
 
   for (let i = 0; i < newKeys.length; i += 1) {
     const key = newKeys[i];
     if (isEventHandlerProp(key)) continue;
-    if (OWN.call(oldProps, key)) continue;
-    changed.push({ kind: "SET_PROP", path: path.slice(), key, value: newProps[key] });
-  }
-
-  for (let i = 0; i < changed.length; i += 1) {
-    patches.push(changed[i]);
+    if (!OWN.call(oldProps, key)) {
+      patches.push({ kind: "SET_PROP", path: path.slice(), key, value: newProps[key] });
+    }
   }
 }
 
 function getNodeKind(vnode) {
   const kind = vnode && vnode.nodeKind;
-  if (kind === NODE_KIND.ELEMENT || kind === NODE_KIND.TEXT) return kind;
+  if (kind === NODE_KIND.TEXT || kind === NODE_KIND.ELEMENT) return kind;
   if (vnode && vnode.type === NODE_KIND.TEXT) return NODE_KIND.TEXT;
   return NODE_KIND.ELEMENT;
 }
 
-function getNodeText(vnode) {
+function getTextValue(vnode) {
   const props = vnode && vnode.props;
-  if (props != null && OWN.call(props, TEXT_PROP)) {
-    const value = props[TEXT_PROP];
+  if (props != null && OWN.call(props, VNODE_TEXT_PROP)) {
+    const value = props[VNODE_TEXT_PROP];
     if (value === null || value === undefined) return "";
     return String(value);
   }
-  return vnode && OWN.call(vnode, "text") && vnode.text != null ? vnode.text : "";
+  return vnode && OWN.call(vnode, "text") && vnode.text != null ? String(vnode.text) : "";
 }
 
 function isEventHandlerProp(key) {
