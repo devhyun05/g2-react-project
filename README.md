@@ -15,6 +15,27 @@ flowchart LR
     D --> E["실제 DOM에 필요한 부분만 반영"]
 ```
 
+## 핵심 로직
+
+### Virtual DOM은 어떻게 만들었는지?
+
+실제 DOM을 읽을 때 element와 text node를 모두 같은 VNode 구조로 바꾼다.  
+특히 text는 문자열로 따로 처리하지 않고 반드시 `TEXT` 타입 VNode로 통일했다. 그래야 렌더링, diff, patch, history가 모두 같은 기준으로 움직일 수 있기 때문이다.
+
+추가로 comment node는 무시하고, `class`는 `className`으로 정규화해서 비교와 렌더링 과정에서 일관되게 다루도록 했다.
+
+### diff 알고리즘은 어떻게 구현했는지?
+
+diff는 이전 트리와 다음 트리를 재귀적으로 비교하면서 patch 목록을 만든다.
+
+- 이전 노드가 없으면 `CREATE`
+- 다음 노드가 없으면 `REMOVE`
+- 타입이 다르면 `REPLACE`
+- text가 달라지면 `TEXT`
+- 속성이 달라지면 `SET_PROP` / `REMOVE_PROP`
+
+children 비교는 index 기반뿐 아니라 key 기반 방식도 함께 검토하고 구현했다. key를 탐색해 매칭하는 과정 자체는 비교적 단순했지만, 각 태그에 안정적인 key를 부여하고 그 규칙을 전체 렌더링 흐름에서 일관되게 유지하는 부분이 더 어려웠다. 그래서 이번 프로젝트에서는 구현 복잡도가 낮고 구조를 예측하기 쉬운 index 기반 방식을 기본으로 채택하되, key 기반 비교도 별도로 확장 가능하도록 설계했다.
+
 ## 팀 구성
 
 | 담당 | 역할 | 맡은 파트 |
@@ -55,27 +76,6 @@ flowchart LR
 - UI에서 core 로직을 다시 짜지 않고 import해서 연결했다.
 - helper를 분리해서 각 모듈을 독립적으로 테스트할 수 있게 만들었다.
 - 구현과 동시에 contract / unit / integration 테스트를 같이 작성했다.
-
-## 핵심 로직
-
-### Virtual DOM은 어떻게 만들었는지?
-
-실제 DOM을 읽을 때 element와 text node를 모두 같은 VNode 구조로 바꾼다.  
-특히 text는 문자열로 따로 처리하지 않고 반드시 `TEXT` 타입 VNode로 통일했다. 그래야 렌더링, diff, patch, history가 모두 같은 기준으로 움직일 수 있기 때문이다.
-
-추가로 comment node는 무시하고, `class`는 `className`으로 정규화해서 비교와 렌더링 과정에서 일관되게 다루도록 했다.
-
-### diff 알고리즘은 어떻게 구현했는지?
-
-diff는 이전 트리와 다음 트리를 재귀적으로 비교하면서 patch 목록을 만든다.
-
-- 이전 노드가 없으면 `CREATE`
-- 다음 노드가 없으면 `REMOVE`
-- 타입이 다르면 `REPLACE`
-- text가 달라지면 `TEXT`
-- 속성이 달라지면 `SET_PROP` / `REMOVE_PROP`
-
-children 비교는 index 기반뿐 아니라 key 기반 방식도 함께 검토하고 구현했다. key를 탐색해 매칭하는 과정 자체는 비교적 단순했지만, 각 태그에 안정적인 key를 부여하고 그 규칙을 전체 렌더링 흐름에서 일관되게 유지하는 부분이 더 어려웠다. 그래서 이번 프로젝트에서는 구현 복잡도가 낮고 구조를 예측하기 쉬운 index 기반 방식을 기본으로 채택하되, key 기반 비교도 별도로 확장 가능하도록 설계했다.
 
 ### patch는 어떻게 적용했는지?
 
