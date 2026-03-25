@@ -1,6 +1,6 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
-import { diff } from "../src/core/diff.js";
+import { diff } from "../../src/core/diff.js";
 
 function text(v) {
   return {
@@ -24,27 +24,27 @@ function element(type, props = {}, children = []) {
   };
 }
 
-test("phase1: create/remove root node", () => {
+test("contract: root create/remove", () => {
   assert.deepEqual(diff(null, element("div")), [{ kind: "CREATE", path: [], node: element("div") }]);
   assert.deepEqual(diff(element("div"), null), [{ kind: "REMOVE", path: [] }]);
 });
 
-test("phase1: replace when node type changes", () => {
+test("contract: replace when node type changes", () => {
   assert.deepEqual(diff(element("div"), element("span")), [
     { kind: "REPLACE", path: [], node: element("span") },
   ]);
 });
 
-test("phase1: text change uses props.nodeValue", () => {
+test("contract: text nodeValue diff", () => {
   assert.deepEqual(diff(element("p", {}, [text("A")]), element("p", {}, [text("B")]),), [
     { kind: "TEXT", path: [0], text: "B" },
   ]);
 });
 
-test("phase1: prop set/remove change", () => {
-  const a = element("div", { id: "a" }, []);
-  const b = element("div", { class: "x" }, []);
-  const result = diff(a, b);
+test("contract: prop set and remove", () => {
+  const oldNode = element("div", { id: "a" }, []);
+  const newNode = element("div", { class: "x" }, []);
+  const result = diff(oldNode, newNode);
   result.sort((x, y) => x.kind.localeCompare(y.kind));
   assert.deepEqual(result, [
     { kind: "REMOVE_PROP", path: [], key: "id" },
@@ -52,15 +52,17 @@ test("phase1: prop set/remove change", () => {
   ]);
 });
 
-test("phase1: child add/remove by index", () => {
-  const oldNode = element("ul", {}, [text("1")]);
-  const newNode = element("ul", {}, [text("1"), text("2")]);
-  assert.deepEqual(diff(oldNode, newNode), [{ kind: "CREATE", path: [1], node: text("2") }]);
+test("contract: children add/remove by index", () => {
+  assert.deepEqual(diff(element("ul", {}, [text("1")]), element("ul", {}, [text("1"), text("2")])), [
+    { kind: "CREATE", path: [1], node: text("2") },
+  ]);
 
-  assert.deepEqual(diff(newNode, oldNode), [{ kind: "REMOVE", path: [1] }]);
+  assert.deepEqual(diff(element("ul", {}, [text("1"), text("2")]), element("ul", {}, [text("1")])), [
+    { kind: "REMOVE", path: [1] },
+  ]);
 });
 
-test("phase1: nested path correctness", () => {
+test("contract: nested path correctness", () => {
   const oldNode = element("main", {}, [
     element("section", {}, [
       element("p", {}, [text("A")]),
@@ -78,4 +80,3 @@ test("phase1: nested path correctness", () => {
     { kind: "CREATE", path: [0, 1], node: element("p", {}, []) },
   ]);
 });
-
