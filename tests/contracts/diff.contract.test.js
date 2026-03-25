@@ -4,23 +4,17 @@ import { diff } from "../../src/core/diff.js";
 
 function text(v) {
   return {
-    nodeKind: "TEXT",
     type: "TEXT",
     props: { nodeValue: v },
-    text: v,
     children: [],
-    key: null,
   };
 }
 
 function element(type, props = {}, children = []) {
   return {
-    nodeKind: "ELEMENT",
     type,
     props,
     children,
-    text: null,
-    key: null,
   };
 }
 
@@ -43,12 +37,12 @@ test("contract: text nodeValue diff", () => {
 
 test("contract: prop set and remove", () => {
   const oldNode = element("div", { id: "a" }, []);
-  const newNode = element("div", { class: "x" }, []);
+  const newNode = element("div", { className: "x" }, []);
   const result = diff(oldNode, newNode);
   result.sort((x, y) => x.kind.localeCompare(y.kind));
   assert.deepEqual(result, [
     { kind: "REMOVE_PROP", path: [], key: "id" },
-    { kind: "SET_PROP", path: [], key: "class", value: "x" },
+    { kind: "SET_PROP", path: [], key: "className", value: "x" },
   ]);
 });
 
