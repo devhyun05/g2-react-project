@@ -1,13 +1,19 @@
 # Phase snapshots
 
-- `phase1`: 최소 제출본(기본 기능)
-- `phase2`: 안정화/테스트 보완본
-- `phase3`: 심화본(현재 작업)
+## phase1
+- 최소 제출본
+- 포함: `domToVNode`, `vNodeToDOM`, `render`, `diff`, `patch`, `history`, 기본 UI
 
-사용법:
+## phase2
+- 안정화본
+- 포함: 계약 테스트 7개 + root 처리 보완 + text edge case 보완 + props 처리 보완
+
+## phase3
+- 심화본
+- 기존 고급 기능 유지
+
+Usage:
 - `npm run phase:load -- phase1`
 - `npm run phase:load -- phase2`
 - `npm run phase:load -- phase3`
 
-위 명령은 지정한 단계의 폴더 내용을 현재 프로젝트 루트(`src`, `tests`, `index.html`, `style.css`,
-`package.json`, `README.md`)에 반영합니다.
