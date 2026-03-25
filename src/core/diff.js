@@ -1,4 +1,5 @@
-import { NODE_KIND } from "./types.js";
+const TEXT_KIND = "TEXT";
+const ELEMENT_KIND = "ELEMENT";
 
 const OWN = Object.prototype.hasOwnProperty;
 const EVENT_PREFIX = "on";
@@ -31,7 +32,7 @@ function walk(oldNode, newNode, path, patches) {
     return;
   }
 
-  if (oldKind === NODE_KIND.TEXT) {
+  if (oldKind === TEXT_KIND) {
     const oldText = getTextValue(oldNode);
     const newText = getTextValue(newNode);
     if (oldText !== newText) {
@@ -84,10 +85,8 @@ function diffProps(oldNode, newNode, path, patches) {
 }
 
 function getNodeKind(vnode) {
-  const kind = vnode && vnode.nodeKind;
-  if (kind === NODE_KIND.TEXT || kind === NODE_KIND.ELEMENT) return kind;
-  if (vnode && vnode.type === NODE_KIND.TEXT) return NODE_KIND.TEXT;
-  return NODE_KIND.ELEMENT;
+  if (vnode && vnode.type === TEXT_KIND) return TEXT_KIND;
+  return ELEMENT_KIND;
 }
 
 function getTextValue(vnode) {
