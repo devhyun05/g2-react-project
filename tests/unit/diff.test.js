@@ -3,6 +3,11 @@ import { test } from "../helpers/testHarness.js";
 
 import { diff } from "../../src/core/diff.js";
 import {
+  createIdentityState,
+  reconcileVNodeIdentity,
+  seedVNodeIdentity,
+} from "../../src/core/identity.js";
+import {
   basicTree,
   deepTree,
   replacedRootTree,
@@ -113,4 +118,282 @@ test("diff ignores event props and emits remove patches for trailing children", 
   const patches = diff(oldTree, newTree);
 
   assert.deepEqual(patches, [{ kind: "REMOVE", path: [1] }]);
+});
+
+test("diff infers stable keys from common identity props without an explicit key", () => {
+  const oldTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: { "data-id": "alpha" },
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: { "data-id": "charlie" },
+        children: [{ type: "TEXT", props: { nodeValue: "C" }, children: [] }],
+      },
+    ],
+  };
+  const newTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: { "data-id": "alpha" },
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: { "data-id": "bravo" },
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: { "data-id": "charlie" },
+        children: [{ type: "TEXT", props: { nodeValue: "C" }, children: [] }],
+      },
+    ],
+  };
+
+  const patches = diff(oldTree, newTree);
+
+  assert.deepEqual(patches, [
+    {
+      kind: "CREATE",
+      path: [1],
+      node: {
+        type: "li",
+        props: { "data-id": "bravo" },
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+    },
+  ]);
+});
+
+test("diff reuses stored generated keys for fully unkeyed siblings across middle insertion", () => {
+  const identityState = createIdentityState();
+  const oldTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "C" }, children: [] }],
+      },
+    ],
+  };
+  const newTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "C" }, children: [] }],
+      },
+    ],
+  };
+
+  seedVNodeIdentity(oldTree, identityState);
+  reconcileVNodeIdentity(oldTree, newTree, identityState);
+
+  assert.deepEqual(diff(oldTree, newTree), [
+    {
+      kind: "CREATE",
+      path: [1],
+      node: {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+    },
+  ]);
+});
+
+test("diff reuses generated keys for fully unkeyed siblings when inserting in the middle", () => {
+  const oldTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "C" }, children: [] }],
+      },
+    ],
+  };
+  const newTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "C" }, children: [] }],
+      },
+    ],
+  };
+
+  const patches = diff(oldTree, newTree);
+
+  assert.deepEqual(patches, [
+    {
+      kind: "CREATE",
+      path: [1],
+      node: {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+    },
+  ]);
+});
+
+test("diff keeps same-position unkeyed nodes as updates instead of remove-create churn", () => {
+  const oldTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "before" }, children: [] }],
+      },
+    ],
+  };
+  const newTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "after" }, children: [] }],
+      },
+    ],
+  };
+
+  const patches = diff(oldTree, newTree);
+
+  assert.deepEqual(patches, [{ kind: "TEXT", path: [0, 0], text: "after" }]);
+});
+
+test("diff preserves unkeyed sibling identity on reorder without text rewrite churn", () => {
+  const oldTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+    ],
+  };
+  const newTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: {},
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+    ],
+  };
+
+  const patches = diff(oldTree, newTree);
+
+  assert.equal(patches.some((patch) => patch.kind === "TEXT"), false);
+  assert.deepEqual(
+    patches.map((patch) => patch.kind),
+    ["REMOVE", "CREATE"],
+  );
+});
+
+test("duplicate sibling keys disable keyed matching and fall back to positional diff", () => {
+  const oldTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: { "data-id": "dup" },
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: { "data-id": "dup" },
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+    ],
+  };
+  const newTree = {
+    type: "ul",
+    props: {},
+    children: [
+      {
+        type: "li",
+        props: { "data-id": "dup" },
+        children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }],
+      },
+      {
+        type: "li",
+        props: { "data-id": "dup" },
+        children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }],
+      },
+    ],
+  };
+
+  const patches = diff(oldTree, newTree);
+
+  assert.deepEqual(patches, [
+    { kind: "TEXT", path: [0, 0], text: "B" },
+    { kind: "TEXT", path: [1, 0], text: "A" },
+  ]);
 });

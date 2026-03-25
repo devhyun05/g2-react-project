@@ -69,8 +69,10 @@ ELEMENT 노드 포맷:
 
 ### 3) Diff/Patch Rules
 
-- key-based diff 금지
-- children 비교는 index 기반만 허용
+- children 비교는 path 계산을 기준으로 유지하되, 안정적인 식별자(`key`, `id`, `data-id`, `data-key`, `data-index`, `name`, `value`)가 있으면 그 값을 key로 사용
+- 식별자를 찾지 못한 경우에는 이전 sibling 집합에서 생성한 hidden key를 새 sibling에 재할당해 같은 노드를 우선 매칭
+- hidden generated key는 DOM props가 아니라 VNode snapshot 메타데이터로만 저장하고 history clone에서도 유지
+- 같은 부모의 sibling key가 중복되면 해당 부모에서는 keyed matching을 포기하고 index fallback으로 처리
 - path는 배열 인덱스 경로 사용
 - patch type은 아래만 허용:
   - `CREATE`
@@ -152,7 +154,8 @@ project-root/
 - 작업 시작 코멘트에 inferred contract를 짧게 요약한다.
 - 반드시 본인 소유 파일 범위 안에서만 구현한다.
 - 공개 계약(VNode/Patch/함수 시그니처)을 임의 변경하지 않는다.
-- 지정되지 않은 고급 동작(예: key-based diff)은 구현하지 않는다.
+- 문서화된 stable key inference 범위(`key`, `id`, `data-id`, `data-key`, `data-index`, `name`, `value`)와 generated hidden key 재사용 규칙 밖의 고급 동작은 임의로 추가하지 않는다.
+- duplicate sibling key를 억지로 병합하지 않고 index fallback으로 안전하게 처리한다.
 
 ## Team Structure (Cycle 1, 4인)
 
@@ -209,7 +212,7 @@ project-root/
 - `diff(oldVNode, newVNode) -> Patch[]`
 - TEXT 비교(`props.nodeValue`)
 - props 변경/삭제 patch 생성
-- children index 기반 재귀 비교
+- children 재귀 비교를 기본으로 하되, 안정적인 식별자나 이전 sibling 집합에서 이어받은 generated key로 동일 노드를 우선 매칭
 - nested path 정확도 보장
 
 필수 규칙:

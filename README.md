@@ -73,7 +73,22 @@ diff는 이전 트리와 다음 트리를 재귀적으로 비교하면서 patch 
 - text가 달라지면 `TEXT`
 - 속성이 달라지면 `SET_PROP` / `REMOVE_PROP`
 
-children 비교는 key 기반이 아니라 index 기반으로 구현했다. 이 프로젝트에서는 고급 최적화보다 patch path를 예측 가능하게 유지하는 쪽이 더 중요했기 때문이다.
+children 비교는 기본적으로 path 배열을 유지하면서 diff한다. 형제 노드에 안정적인 식별자(`key`, `id`, `data-id`, `data-key`, `data-index`, `name`, `value` 등)가 있으면 그 값을 key로 사용하고, 그런 식별자가 전혀 없어도 이전 sibling 집합에서 생성한 hidden key를 새 sibling에 이어붙여 같은 노드를 우선 매칭한다. 이 hidden key는 DOM attribute로 넣지 않고 VNode snapshot 메타데이터에만 저장되며, history snapshot을 거쳐도 유지된다. 그래서 실제로 중간 삽입/삭제에서도 뒤쪽 형제를 통째로 다시 쓰지 않고, 정말로 새로운 노드만 `CREATE` 하게 된다.
+
+#### generated key가 실제로 동작하는 기준
+
+- 첫 snapshot에서 unkeyed sibling마다 hidden generated key를 만든다.
+- 다음 patch에서 새 VNode를 만들 때 이전 snapshot과 비교해서 같은 sibling으로 판단되면 그 generated key를 이어받는다.
+- `undo` / `redo`를 해도 history snapshot 안에 hidden key가 같이 복제되므로 identity가 유지된다.
+- `diff(oldVNode, newVNode)`를 직접 호출하는 경우에도 한 번의 호출 안에서 identity preparation을 먼저 수행해서 middle insert/delete에서 trailing rewrite churn을 줄인다.
+
+#### key가 중복되면 어떻게 되는지?
+
+- 같은 부모 아래 sibling key는 원칙적으로 유일해야 한다.
+- `key`, `id`, `data-id` 같은 안정적인 식별자가 sibling 사이에서 중복되면 그 부모에서는 keyed matching을 강제로 포기하고 index 기반 비교로 fallback한다.
+- 즉, 중복 key가 있으면 잘못된 노드를 억지로 재사용하지는 않지만, keyed diff의 이점도 사라진다.
+- 내부 generated key는 `identityState.nextGeneratedId` 증가 방식이라 정상 경로에서는 중복되지 않는다.
+- 완전히 동일한 unkeyed sibling이 여러 개 있으면 진짜 외부 identity가 없기 때문에 여전히 heuristic 매칭이라는 한계가 남는다.
 
 ### patch는 어떻게 적용했는지?
 
@@ -127,7 +142,9 @@ undo는 index를 뒤로, redo는 앞으로 옮긴다. 그리고 undo 이후 새 
 - DOM -> VNode -> DOM 변환이 정상적으로 왕복되는지
 - text 변경 시 `TEXT` patch가 정확히 생성되는지
 - prop 변경과 제거가 `SET_PROP`, `REMOVE_PROP`으로 분리되는지
-- child 추가/삭제 시 index 기반 path가 올바르게 계산되는지
+- child 추가/삭제 시 stable key가 있으면 기존 sibling이 불필요하게 다시 쓰이지 않는지
+- unkeyed middle insert에서도 generated key가 유지되어 뒤쪽 sibling이 불필요하게 `TEXT` patch로 다시 쓰이지 않는지
+- sibling key가 중복되면 keyed matching 대신 index fallback으로 안전하게 동작하는지
 - patch 적용 후 real DOM이 target DOM과 같아지는지
 - undo / redo 시 history index와 현재 상태가 일치하는지
 - patch 버튼 실행 후 real DOM, test DOM, patch log가 함께 갱신되는지

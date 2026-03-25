@@ -117,6 +117,39 @@ test("load diff on a nested tree stays correct under larger input", () => {
   assert.ok(elapsedMs >= 0);
 });
 
+test("load diff on a large unkeyed middle insert avoids trailing rewrite churn", () => {
+  const buildUnkeyedList = (items) => ({
+    type: "ul",
+    props: {},
+    children: items.map((label) => ({
+      type: "li",
+      props: {},
+      children: [{ type: "TEXT", props: { nodeValue: label }, children: [] }],
+    })),
+  });
+
+  const originalItems = Array.from({ length: 240 }, (_, index) => `item-${index}`);
+  const nextItems = [
+    ...originalItems.slice(0, 120),
+    "item-inserted",
+    ...originalItems.slice(120),
+  ];
+
+  const startedAt = performance.now();
+  const patches = diff(buildUnkeyedList(originalItems), buildUnkeyedList(nextItems));
+  const elapsedMs = performance.now() - startedAt;
+
+  assert.deepEqual(
+    patches.filter((patch) => patch.kind === "CREATE").map((patch) => patch.path),
+    [[120]],
+  );
+  assert.equal(
+    patches.some((patch) => patch.kind === "TEXT" && Array.isArray(patch.path) && patch.path[0] >= 120),
+    false,
+  );
+  assert.ok(elapsedMs >= 0);
+});
+
 test("load patch loop preserves correctness over many sequential updates", () => {
   installDOMGlobals();
   const iterations = 40;

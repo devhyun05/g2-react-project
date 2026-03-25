@@ -1,6 +1,6 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import { diff } from "../../src/core/diff.js";
+import { test } from "../helpers/testHarness.js";
 
 function text(v) {
   return {
@@ -72,5 +72,37 @@ test("contract: nested path correctness", () => {
   assert.deepEqual(diff(oldNode, newNode), [
     { kind: "TEXT", path: [0, 0, 0], text: "B" },
     { kind: "CREATE", path: [0, 1], node: element("p", {}, []) },
+  ]);
+});
+
+test("contract: inferred stable keys keep matching siblings when inserting in the middle", () => {
+  const oldNode = element("ul", {}, [
+    element("li", { id: "alpha" }, [text("A")]),
+    element("li", { id: "charlie" }, [text("C")]),
+  ]);
+  const newNode = element("ul", {}, [
+    element("li", { id: "alpha" }, [text("A")]),
+    element("li", { id: "bravo" }, [text("B")]),
+    element("li", { id: "charlie" }, [text("C")]),
+  ]);
+
+  assert.deepEqual(diff(oldNode, newNode), [
+    { kind: "CREATE", path: [1], node: element("li", { id: "bravo" }, [text("B")]) },
+  ]);
+});
+
+test("contract: generated keys preserve unkeyed siblings across a middle insert", () => {
+  const oldNode = element("ul", {}, [
+    element("li", {}, [text("A")]),
+    element("li", {}, [text("C")]),
+  ]);
+  const newNode = element("ul", {}, [
+    element("li", {}, [text("A")]),
+    element("li", {}, [text("B")]),
+    element("li", {}, [text("C")]),
+  ]);
+
+  assert.deepEqual(diff(oldNode, newNode), [
+    { kind: "CREATE", path: [1], node: element("li", {}, [text("B")]) },
   ]);
 });

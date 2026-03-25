@@ -1,4 +1,3 @@
-import test from "node:test";
 import assert from "node:assert/strict";
 import {
   createHistory,
@@ -7,6 +6,12 @@ import {
   redoHistory,
   getCurrentVNode,
 } from "../../src/core/history.js";
+import {
+  createIdentityState,
+  getGeneratedVNodeKey,
+  seedVNodeIdentity,
+} from "../../src/core/identity.js";
+import { test } from "../helpers/testHarness.js";
 
 function vnode(id) {
   return { type: "div", props: { id }, children: [] };
@@ -111,4 +116,23 @@ test("normalize 대상 index가 비정상이어도 undo/redo/getCurrentVNode가 
   const redone = redoHistory(malformedLow);
   assert.equal(redone.index, 1);
   assert.equal(getCurrentVNode(redone).props.id, "B");
+});
+
+test("history snapshots preserve generated vnode identity metadata", () => {
+  const identityState = createIdentityState();
+  const initial = {
+    type: "ul",
+    props: {},
+    children: [
+      { type: "li", props: {}, children: [{ type: "TEXT", props: { nodeValue: "A" }, children: [] }] },
+      { type: "li", props: {}, children: [{ type: "TEXT", props: { nodeValue: "B" }, children: [] }] },
+    ],
+  };
+
+  seedVNodeIdentity(initial, identityState);
+  const history = createHistory(initial);
+  const current = getCurrentVNode(history);
+
+  assert.equal(getGeneratedVNodeKey(current.children[0]) != null, true);
+  assert.equal(getGeneratedVNodeKey(current.children[1]) != null, true);
 });

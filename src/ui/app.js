@@ -26,12 +26,14 @@ async function loadCoreModules() {
     { diff },
     { applyPatches },
     { createHistory, getCurrentVNode, pushHistory, redoHistory, undoHistory },
+    { cloneWithVNodeMetadata, createIdentityState, reconcileVNodeIdentity, seedVNodeIdentity },
   ] = await Promise.all([
     import("../core/domToVNode.js"),
     import("../core/render.js"),
     import("../core/diff.js"),
     import("../core/patch.js"),
     import("../core/history.js"),
+    import("../core/identity.js"),
   ]);
 
   return {
@@ -44,6 +46,10 @@ async function loadCoreModules() {
     pushHistory,
     redoHistory,
     undoHistory,
+    cloneWithVNodeMetadata,
+    createIdentityState,
+    reconcileVNodeIdentity,
+    seedVNodeIdentity,
   };
 }
 
@@ -53,11 +59,7 @@ async function loadCoreModules() {
  * @returns {T}
  */
 function cloneValue(value) {
-  if (typeof structuredClone === "function") {
-    return structuredClone(value);
-  }
-
-  return JSON.parse(JSON.stringify(value));
+  return value;
 }
 
 /**
@@ -154,6 +156,7 @@ function parseHTMLRoot(html) {
  */
 function createPlayground(elements, core) {
   let history = null;
+  const identityState = core.createIdentityState();
 
   function syncButtons() {
     syncHistoryButtons(
@@ -170,15 +173,16 @@ function createPlayground(elements, core) {
   }
 
   function renderBoth(vnode) {
-    core.render(cloneValue(vnode), elements.realRoot);
+    core.render(core.cloneWithVNodeMetadata(vnode), elements.realRoot);
     elements.testRoot.value = vnodeToHTML(vnode, core.render);
     renderTree(vnode);
   }
 
   function initialize() {
     const initialVNode = core.domToVNode(getRootNode(elements.realRoot));
+    core.seedVNodeIdentity(initialVNode, identityState);
     elements.testRoot.value = vnodeToHTML(initialVNode, core.render);
-    history = core.createHistory(cloneValue(initialVNode));
+    history = core.createHistory(core.cloneWithVNodeMetadata(initialVNode));
     renderTree(initialVNode);
     renderPatchLog(elements.patchLog, []);
     syncButtons();
@@ -198,8 +202,9 @@ function createPlayground(elements, core) {
         throw new Error(safety.reason ?? fallbackMessages.invalidHtmlParse);
       }
 
+      core.reconcileVNodeIdentity(previousVNode, nextVNode, identityState);
       elements.testRoot.value = vnodeToHTML(nextVNode, core.render);
-      const patches = core.diff(previousVNode, nextVNode);
+      const patches = core.diff(previousVNode, nextVNode, { skipIdentityPrep: true });
       const patchFallback = getPatchSafetyFallback(previousVNode, nextVNode, patches);
 
       console.log("[Patch]", patches);
@@ -212,16 +217,16 @@ function createPlayground(elements, core) {
       }
 
       if (patchFallback.useFullRender) {
-        core.render(cloneValue(nextVNode), elements.realRoot);
+        core.render(core.cloneWithVNodeMetadata(nextVNode), elements.realRoot);
       } else {
         core.applyPatches(getRootNode(elements.realRoot), patches);
 
         if (!isPatchedDOMInSync(core, getRootNode(elements.realRoot), nextVNode)) {
-          core.render(cloneValue(nextVNode), elements.realRoot);
+          core.render(core.cloneWithVNodeMetadata(nextVNode), elements.realRoot);
         }
       }
 
-      history = core.pushHistory(history, cloneValue(nextVNode));
+      history = core.pushHistory(history, core.cloneWithVNodeMetadata(nextVNode));
       elements.testRoot.value = vnodeToHTML(nextVNode, core.render);
       renderTree(nextVNode);
       renderPatchLog(elements.patchLog, patches);
@@ -254,7 +259,7 @@ function createPlayground(elements, core) {
     }
 
     const nextVNode = core.getCurrentVNode(nextHistory);
-    const patches = core.diff(currentVNode, nextVNode);
+    const patches = core.diff(currentVNode, nextVNode, { skipIdentityPrep: true });
     history = nextHistory;
     renderBoth(nextVNode);
     renderPatchLog(elements.patchLog, patches);
@@ -273,7 +278,7 @@ function createPlayground(elements, core) {
     }
 
     const nextVNode = core.getCurrentVNode(nextHistory);
-    const patches = core.diff(currentVNode, nextVNode);
+    const patches = core.diff(currentVNode, nextVNode, { skipIdentityPrep: true });
     history = nextHistory;
     renderBoth(nextVNode);
     renderPatchLog(elements.patchLog, patches);

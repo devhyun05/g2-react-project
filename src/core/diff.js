@@ -1,15 +1,33 @@
+import {
+  cloneWithVNodeMetadata,
+  createIdentityState,
+  getVNodeKey,
+  reconcileVNodeIdentity,
+  seedVNodeIdentity,
+} from "./identity.js";
+
 const TEXT_KIND = "TEXT";
 const TEXT_PROP = "nodeValue";
 const EVENT_PREFIX = "on";
 const OWN = Object.prototype.hasOwnProperty;
-
 const ENABLE_KEYED_CHILD_DIFF = true;
-const ENABLE_STABLE_KEY_INFERENCE = false;
-const PATH_SEPARATOR = "/";
 
-export function diff(oldVNode, newVNode) {
+export function diff(oldVNode, newVNode, options = {}) {
+  const skipIdentityPrep = Boolean(options?.skipIdentityPrep);
+  let preparedOldVNode = oldVNode;
+  let preparedNewVNode = newVNode;
+
+  if (!skipIdentityPrep) {
+    const identityState = createIdentityState();
+    preparedOldVNode = cloneWithVNodeMetadata(oldVNode);
+    preparedNewVNode = cloneWithVNodeMetadata(newVNode);
+
+    seedVNodeIdentity(preparedOldVNode, identityState);
+    reconcileVNodeIdentity(preparedOldVNode, preparedNewVNode, identityState);
+  }
+
   const patches = [];
-  walk(oldVNode, newVNode, [], patches);
+  walk(preparedOldVNode, preparedNewVNode, [], patches);
   return patches;
 }
 
@@ -27,21 +45,12 @@ function walk(oldNode, newNode, path, patches) {
     return;
   }
 
-  const oldType = oldNode.type;
-  const newType = newNode.type;
-
-  if (oldType !== newType) {
+  if (oldNode.type !== newNode.type) {
     patches.push({ kind: "REPLACE", path: path.slice(0), node: newNode });
     return;
   }
 
-  const isText = oldType === TEXT_KIND;
-
-  if (!isText && isSubtreeEqual(oldNode, newNode)) {
-    return;
-  }
-
-  if (isText) {
+  if (oldNode.type === TEXT_KIND) {
     const oldText = getTextValue(oldNode);
     const newText = getTextValue(newNode);
     if (oldText !== newText) {
@@ -50,19 +59,17 @@ function walk(oldNode, newNode, path, patches) {
     return;
   }
 
+  if (isSubtreeEqual(oldNode, newNode)) {
+    return;
+  }
+
   diffProps(oldNode, newNode, path, patches);
-
-  const oldChildren = oldNode.children || [];
-  const newChildren = newNode.children || [];
-
-  const normalizedOldChildren = ENABLE_STABLE_KEY_INFERENCE
-    ? assignStableKeysForChildren(oldChildren, path)
-    : oldChildren;
-  const normalizedNewChildren = ENABLE_STABLE_KEY_INFERENCE
-    ? assignStableKeysForChildren(newChildren, path)
-    : newChildren;
-
-  diffChildren(normalizedOldChildren, normalizedNewChildren, path, patches);
+  diffChildren(
+    Array.isArray(oldNode.children) ? oldNode.children : [],
+    Array.isArray(newNode.children) ? newNode.children : [],
+    path,
+    patches,
+  );
 }
 
 function diffChildren(oldChildren, newChildren, path, patches) {
@@ -79,19 +86,19 @@ function diffChildren(oldChildren, newChildren, path, patches) {
   }
 
   const maxLength = Math.max(oldChildren.length, newChildren.length);
-  for (let i = 0; i < maxLength; i += 1) {
-    path.push(i);
-    walk(oldChildren[i], newChildren[i], path, patches);
+  for (let index = 0; index < maxLength; index += 1) {
+    path.push(index);
+    walk(oldChildren[index], newChildren[index], path, patches);
     path.pop();
   }
 }
 
 function diffChildrenByKeys(oldChildren, newChildren, path, patches) {
   const oldIndexByKey = new Map();
-  for (let i = 0; i < oldChildren.length; i += 1) {
-    const key = getVNodeKey(oldChildren[i]);
+  for (let index = 0; index < oldChildren.length; index += 1) {
+    const key = getVNodeKey(oldChildren[index]);
     if (key != null) {
-      oldIndexByKey.set(key, i);
+      oldIndexByKey.set(key, index);
     }
   }
 
@@ -100,17 +107,17 @@ function diffChildrenByKeys(oldChildren, newChildren, path, patches) {
   const oldKeysInNew = new Set();
 
   for (let newIndex = 0; newIndex < newChildren.length; newIndex += 1) {
-    const child = newChildren[newIndex];
-    const key = getVNodeKey(child);
+    const key = getVNodeKey(newChildren[newIndex]);
     oldKeysInNew.add(key);
 
     const oldIndex = oldIndexByKey.has(key) ? oldIndexByKey.get(key) : -1;
     newIndexToOldIndex[newIndex] = oldIndex;
-    if (oldIndex >= 0) oldIndexesInNewOrder.push(oldIndex);
+    if (oldIndex >= 0) {
+      oldIndexesInNewOrder.push(oldIndex);
+    }
   }
 
-  const lis = longestIncreasingSubsequence(oldIndexesInNewOrder);
-  const lisSet = new Set(lis);
+  const lisSet = new Set(longestIncreasingSubsequence(oldIndexesInNewOrder));
 
   for (let oldIndex = oldChildren.length - 1; oldIndex >= 0; oldIndex -= 1) {
     const oldKey = getVNodeKey(oldChildren[oldIndex]);
@@ -123,14 +130,14 @@ function diffChildrenByKeys(oldChildren, newChildren, path, patches) {
 
   for (let newIndex = 0; newIndex < newChildren.length; newIndex += 1) {
     const oldIndex = newIndexToOldIndex[newIndex];
-    const newChild = newChildren[newIndex];
-
     path.push(newIndex);
+
     if (oldIndex >= 0 && lisSet.has(oldIndex)) {
-      walk(oldChildren[oldIndex], newChild, path, patches);
+      walk(oldChildren[oldIndex], newChildren[newIndex], path, patches);
     } else {
-      walk(null, newChild, path, patches);
+      walk(null, newChildren[newIndex], path, patches);
     }
+
     path.pop();
   }
 }
@@ -139,11 +146,7 @@ function diffProps(oldNode, newNode, path, patches) {
   const oldProps = oldNode.props || {};
   const newProps = newNode.props || {};
 
-  const oldKeys = Object.keys(oldProps);
-  const newKeys = Object.keys(newProps);
-
-  for (let i = 0; i < oldKeys.length; i += 1) {
-    const key = oldKeys[i];
+  for (const key of Object.keys(oldProps)) {
     if (isEventHandlerProp(key)) continue;
 
     if (!OWN.call(newProps, key)) {
@@ -151,15 +154,12 @@ function diffProps(oldNode, newNode, path, patches) {
       continue;
     }
 
-    const oldValue = oldProps[key];
-    const newValue = newProps[key];
-    if (oldValue !== newValue) {
-      patches.push({ kind: "SET_PROP", path: path.slice(0), key, value: String(newValue ?? "") });
+    if (oldProps[key] !== newProps[key]) {
+      patches.push({ kind: "SET_PROP", path: path.slice(0), key, value: String(newProps[key] ?? "") });
     }
   }
 
-  for (let i = 0; i < newKeys.length; i += 1) {
-    const key = newKeys[i];
+  for (const key of Object.keys(newProps)) {
     if (isEventHandlerProp(key)) continue;
     if (OWN.call(oldProps, key)) continue;
     patches.push({ kind: "SET_PROP", path: path.slice(0), key, value: String(newProps[key] ?? "") });
@@ -173,7 +173,6 @@ function isSubtreeEqual(left, right) {
 
   const leftProps = left.props || {};
   const rightProps = right.props || {};
-
   let leftCount = 0;
 
   for (const key in leftProps) {
@@ -196,107 +195,42 @@ function getTextValue(vnode) {
   const props = vnode && vnode.props;
   if (props != null && OWN.call(props, TEXT_PROP)) {
     const value = props[TEXT_PROP];
-    if (value === null || value === undefined) return "";
-    return String(value);
+    return value == null ? "" : String(value);
   }
+
   return "";
 }
 
 function isEventHandlerProp(key) {
-  return key.startsWith(EVENT_PREFIX);
-}
-
-function getVNodeKey(vnode) {
-  if (!vnode || typeof vnode !== "object") {
-    return null;
-  }
-
-  if (vnode.key != null) {
-    return String(vnode.key);
-  }
-
-  const props = vnode.props && typeof vnode.props === "object" ? vnode.props : null;
-  if (props?.key != null) {
-    return String(props.key);
-  }
-
-  return null;
+  return typeof key === "string" && key.startsWith(EVENT_PREFIX);
 }
 
 function isReusableKeyedChildren(children) {
   if (children.length === 0) return true;
 
   const keys = new Set();
-  for (let i = 0; i < children.length; i += 1) {
-    const child = children[i];
+  for (const child of children) {
     const key = getVNodeKey(child);
-    if (key == null) return false;
-    if (keys.has(key)) return false;
+    if (key == null || keys.has(key)) {
+      return false;
+    }
     keys.add(key);
   }
 
   return true;
 }
 
-function assignStableKeysForChildren(children, parentPath) {
-  const usedKeys = new Set();
-  const result = new Array(children.length);
-
-  for (let index = 0; index < children.length; index += 1) {
-    const child = children[index];
-    if (!child) {
-      result[index] = child;
-      continue;
-    }
-
-    const candidateKey = buildStableChildKey(child, parentPath, index);
-    const normalized = normalizeKeyValue(candidateKey);
-    const uniqueKey = ensureUniqueKey(normalized, usedKeys);
-
-    const childWithKey = { ...child, key: uniqueKey };
-    usedKeys.add(uniqueKey);
-    result[index] = childWithKey;
-  }
-
-  return result;
-}
-
-function buildStableChildKey(child, parentPath, index) {
-  const props = child.props || {};
-
-  if (child.key != null) return child.key;
-  if (props.key != null) return props.key;
-  if (props.id != null) return props.id;
-  if (props.uuid != null) return props.uuid;
-  if (props._id != null) return props._id;
-  if (props.name != null) return `${child.type}|${props.name}`;
-  if (props.value != null) return `${child.type}|${props.value}`;
-
-  return `${child.type ?? "NODE"}|${parentPath.join(PATH_SEPARATOR)}|fallback-${index}`;
-}
-
-function normalizeKeyValue(rawKey) {
-  if (rawKey == null) return "";
-  return String(rawKey);
-}
-
-function ensureUniqueKey(baseKey, usedKeys) {
-  if (!usedKeys.has(baseKey)) return baseKey;
-
-  let suffix = 1;
-  while (usedKeys.has(`${baseKey}#${suffix}`)) {
-    suffix += 1;
-  }
-  return `${baseKey}#${suffix}`;
-}
-
 function longestIncreasingSubsequence(values) {
+  if (values.length === 0) {
+    return [];
+  }
+
   const tails = [];
   const tailsIndex = [];
   const prevIndex = new Array(values.length).fill(-1);
 
-  for (let i = 0; i < values.length; i += 1) {
-    const value = values[i];
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index];
     let left = 0;
     let right = tails.length;
 
@@ -311,23 +245,23 @@ function longestIncreasingSubsequence(values) {
 
     if (left === tails.length) {
       tails.push(value);
-      tailsIndex.push(i);
+      tailsIndex.push(index);
     } else {
       tails[left] = value;
-      tailsIndex[left] = i;
+      tailsIndex[left] = index;
     }
 
     if (left > 0) {
-      prevIndex[i] = tailsIndex[left - 1];
+      prevIndex[index] = tailsIndex[left - 1];
     }
   }
 
-  const seq = [];
+  const sequence = [];
   let cursor = tailsIndex[tailsIndex.length - 1];
   while (cursor !== -1) {
-    seq.push(values[cursor]);
+    sequence.push(values[cursor]);
     cursor = prevIndex[cursor];
   }
 
-  return seq.reverse();
+  return sequence.reverse();
 }
