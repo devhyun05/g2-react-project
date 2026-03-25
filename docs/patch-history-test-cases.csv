@@ -1,0 +1,12 @@
+Test ID,Area,File,Line,Test Case,Covers,Expected Result,Priority
+P-001,Patch,tests/unit/patch.test.js,167,getDOMNodeByPath는 rootEl 기준으로 path를 탐색한다,path 탐색 기준(rootEl)과 invalid path 처리,"path=[]는 rootEl 반환, [0]/[0,0] 접근 성공, 범위 밖 path는 null",High
+P-002,Patch,tests/unit/patch.test.js,181,TEXT patch는 text node의 nodeValue를 갱신한다,TEXT patch 기본 동작,"지정 path의 텍스트 노드 값이 before -> after로 변경",High
+P-003,Patch,tests/unit/patch.test.js,191,SET_PROP/REMOVE_PROP은 className 매핑을 지키고 이벤트 prop은 무시한다,className-class 매핑 및 on* 무시 규칙,"className 설정 시 class 속성 반영, onClick 무시, REMOVE_PROP으로 class 제거",High
+P-004,Patch,tests/unit/patch.test.js,208,CREATE와 REMOVE patch는 index path 기준으로 자식을 추가/삭제한다,children index 기반 create/remove,"CREATE 후 자식 수 증가 및 path 정합, REMOVE 후 자식 수 감소 및 노드 재배치 정합",High
+P-005,Patch,tests/unit/patch.test.js,229,REPLACE patch는 대상 노드를 새 VNode 기반 DOM으로 교체한다,REPLACE patch 동작,"대상 노드 tag/id/text가 새 vnode 기준으로 교체",High
+P-006,Patch,tests/unit/patch.test.js,247,중첩 path에서도 CREATE patch가 올바른 부모에 삽입된다,nested path create 삽입 위치,"중첩 path [0,1] 위치에 새 노드가 올바르게 삽입",Medium
+H-001,History,tests/unit/history.test.js,15,createHistory는 빈 history state를 만든다,history 초기 상태,"entries=[], index=-1, getCurrentVNode는 null",High
+H-002,History,tests/unit/history.test.js,21,pushHistory는 snapshot을 추가하고 getCurrentVNode는 복제본을 반환한다,snapshot immutability(외부 변이 차단),"원본 변경/반환값 변경이 history 내부 스냅샷에 영향 없음",High
+H-003,History,tests/unit/history.test.js,33,undoHistory와 redoHistory는 index를 이동시키며 현재 상태를 바꾼다,undo/redo 기본 이동,"undo 시 index 감소 및 이전 상태, redo 시 index 증가 및 다음 상태",High
+H-004,History,tests/unit/history.test.js,47,undo 이후 pushHistory를 호출하면 미래 엔트리를 잘라낸다,future truncation 규칙,"undo 후 push 시 기존 future entry 제거 후 새 entry 추가",High
+H-005,History,tests/unit/history.test.js,63,undo/redo는 경계에서 안전하게 현재 상태를 유지한다,boundary safety(underflow/overflow 방지),"빈 history/단일 entry에서 undo/redo 호출 시 상태 불변",Medium
