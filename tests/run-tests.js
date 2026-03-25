@@ -12,6 +12,7 @@ await import("./unit/patch.test.js");
 await import("./unit/history.test.js");
 await import("./unit/bindings.test.js");
 await import("./unit/concurrency.test.js");
+await import("./unit/safety.test.js");
 await import("./integration/app.integration.test.js");
 
 await run();
