@@ -1,4 +1,4 @@
-<img width="1915" height="892" alt="image" src="https://github.com/user-attachments/assets/fc6736bf-0c5d-4d59-bcb9-2c7702cfd18a" /># 2조 Virtual DOM Simulator
+# 2조 Virtual DOM Simulator
 
 실제 DOM을 Virtual DOM으로 바꾸고, 두 Virtual DOM을 비교해서 바뀐 부분만 실제 DOM에 반영하는 흐름을 Vanilla JavaScript로 구현했다.
 여기에 undo / redo가 가능한 history, 동작을 눈으로 확인할 수 있는 UI, 그리고 Contract 중심 테스트 체계를 함께 구성했다.
@@ -95,10 +95,11 @@ undo는 index를 뒤로, redo는 앞으로 옮긴다. 그리고 undo 이후 새 
 | Undo / Redo | history index를 이동한 뒤 현재 snapshot을 기준으로 다시 렌더링한다 |
 
 ## 테스트는 어떻게 했는지?
-<img width="1915" height="892" alt="image" src="https://github.com/user-attachments/assets/3975d923-c2b8-4ad9-97b9-8969ef2491d4" />
 
 테스트는 단순 확인용으로 붙인 게 아니라, 이 프로젝트의 품질 기준 자체로 사용했다.  
 특히 `AGENTS.md`에서 강조한 contract test와 edge case 대응을 실제 테스트 구조에 그대로 반영했다.
+
+<img width="1915" height="892" alt="image" src="https://github.com/user-attachments/assets/3975d923-c2b8-4ad9-97b9-8969ef2491d4" />
 
 테스트는 네 단계로 나눴다.
 
