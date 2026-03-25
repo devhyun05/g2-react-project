@@ -11,6 +11,12 @@ function getPropsFromAttributes(attributes) {
   return props;
 }
 
+/**
+ * Converts a real DOM node into the agreed VNode format.
+ *
+ * @param {Node | null | undefined} domNode
+ * @returns {{ type: string, props: Record<string, string>, children: Array } | null}
+ */
 export function domToVNode(domNode) {
   if (!domNode) {
     return null;

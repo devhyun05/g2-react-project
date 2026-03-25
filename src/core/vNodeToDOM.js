@@ -7,10 +7,16 @@ function setProps(domNode, props = {}) {
     }
 
     const attributeName = name === "className" ? "class" : name;
-    domNode.setAttribute(attributeName, value);
+    domNode.setAttribute(attributeName, String(value));
   }
 }
 
+/**
+ * Builds a real DOM node from a VNode.
+ *
+ * @param {{ type: string, props: Record<string, string>, children: Array } | null} vnode
+ * @returns {Node | null}
+ */
 export function vNodeToDOM(vnode) {
   if (!vnode) {
     return null;
