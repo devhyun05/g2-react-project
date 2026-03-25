@@ -4,7 +4,16 @@
 여기에 undo / redo가 가능한 history, 동작을 눈으로 확인할 수 있는 UI, 그리고 Contract 중심 테스트 체계를 함께 구성했다.
 
 ---
+## 전체 동작 흐름
+```mermaid
+flowchart LR
+    A["실제 DOM"] --> B["Virtual DOM(VNode)로 변환"]
+    B --> C["이전 상태 / 다음 상태 비교"]
+    C --> D["바뀐 부분만 Patch 생성"]
+    D --> E["실제 DOM에 필요한 부분만 반영"]
+```
 
+[12:03 AM]
 ## 팀 구성
 
 | 담당 | 역할 | 맡은 파트 |
