@@ -5,7 +5,7 @@ export const NODE_KIND = {
 };
 
 function normalizeProps(props) {
-  return props && typeof props === "object" ? props : {};
+  return props && typeof props === "object" ? { ...props } : {};
 }
 
 function normalizeChildren(children) {
@@ -13,11 +13,25 @@ function normalizeChildren(children) {
 }
 
 export function createVNode(type, props = {}, children = []) {
-  return {
+  const nextProps = normalizeProps(props);
+  const nextChildren = normalizeChildren(children);
+  const keyFromProps = nextProps.key;
+
+  if (typeof keyFromProps !== "undefined") {
+    delete nextProps.key;
+  }
+
+  const vnode = {
     type,
-    props: normalizeProps(props),
-    children: normalizeChildren(children),
+    props: nextProps,
+    children: nextChildren,
   };
+
+  if (keyFromProps != null) {
+    vnode.key = String(keyFromProps);
+  }
+
+  return vnode;
 }
 
 export function createTextVNode(nodeValue = "") {

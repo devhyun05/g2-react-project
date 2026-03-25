@@ -1,12 +1,12 @@
 import {
   bindControls,
-  renderHistoryLog,
   renderPatchLog,
   renderVNodeTree,
   setStatusText,
   syncHistoryButtons,
 } from "./bindings.js";
 import { fallbackMessages } from "./fixtures.js";
+import { getPatchSafetyFallback, validateVNodeSafety } from "./safety.js";
 
 const elementIds = {
   realRoot: "real-root",
@@ -93,6 +93,20 @@ function vnodeToHTML(vnode, render) {
 }
 
 /**
+ * @param {{
+ *   domToVNode: (domNode: Node) => unknown,
+ *   diff: (oldVNode: unknown, newVNode: unknown) => unknown[],
+ * }} core
+ * @param {Node} rootNode
+ * @param {unknown} expectedVNode
+ * @returns {boolean}
+ */
+function isPatchedDOMInSync(core, rootNode, expectedVNode) {
+  const actualVNode = core.domToVNode(rootNode);
+  return core.diff(actualVNode, expectedVNode).length === 0;
+}
+
+/**
  * @param {string} html
  * @returns {Node}
  */
@@ -176,7 +190,17 @@ function createPlayground(elements, core) {
       const previousVNode = core.getCurrentVNode(history);
       const nextRootNode = parseHTMLRoot(elements.testRoot.value);
       const nextVNode = core.domToVNode(nextRootNode);
+      const safety = validateVNodeSafety(nextVNode);
+      const redoWillBeDiscarded =
+        history && Array.isArray(history.entries) && history.index < history.entries.length - 1;
+
+      if (!safety.ok) {
+        throw new Error(safety.reason ?? fallbackMessages.invalidHtmlParse);
+      }
+
+      elements.testRoot.value = vnodeToHTML(nextVNode, core.render);
       const patches = core.diff(previousVNode, nextVNode);
+      const patchFallback = getPatchSafetyFallback(previousVNode, nextVNode, patches);
 
       console.log("[Patch]", patches);
 
@@ -187,13 +211,29 @@ function createPlayground(elements, core) {
         return;
       }
 
-      core.applyPatches(getRootNode(elements.realRoot), patches);
+      if (patchFallback.useFullRender) {
+        core.render(cloneValue(nextVNode), elements.realRoot);
+      } else {
+        core.applyPatches(getRootNode(elements.realRoot), patches);
+
+        if (!isPatchedDOMInSync(core, getRootNode(elements.realRoot), nextVNode)) {
+          core.render(cloneValue(nextVNode), elements.realRoot);
+        }
+      }
+
       history = core.pushHistory(history, cloneValue(nextVNode));
       elements.testRoot.value = vnodeToHTML(nextVNode, core.render);
       renderTree(nextVNode);
       renderPatchLog(elements.patchLog, patches);
       syncButtons();
-      setStatusText(elements.statusText, fallbackMessages.patchApplied(patches.length));
+      const statusParts = [fallbackMessages.patchApplied(patches.length)];
+      if (patchFallback.reason) {
+        statusParts.push(patchFallback.reason);
+      }
+      if (redoWillBeDiscarded) {
+        statusParts.push("Redo history was cleared after the new patch.");
+      }
+      setStatusText(elements.statusText, statusParts.join(" "));
     } catch (error) {
       console.error("[Patch Parse Error]", error);
       setStatusText(
@@ -204,35 +244,39 @@ function createPlayground(elements, core) {
   }
 
   function handleUndo() {
-    const previousIndex = history.index;
+    const currentVNode = core.getCurrentVNode(history);
     const nextHistory = core.undoHistory(history);
 
     if (nextHistory.index === history.index) {
+      renderPatchLog(elements.patchLog, []);
       setStatusText(elements.statusText, fallbackMessages.noUndo);
       return;
     }
 
     const nextVNode = core.getCurrentVNode(nextHistory);
+    const patches = core.diff(currentVNode, nextVNode);
     history = nextHistory;
     renderBoth(nextVNode);
-    renderHistoryLog(elements.patchLog, "뒤로가기", previousIndex, nextHistory.index);
+    renderPatchLog(elements.patchLog, patches);
     syncButtons();
     setStatusText(elements.statusText, fallbackMessages.undoApplied);
   }
 
   function handleRedo() {
-    const previousIndex = history.index;
+    const currentVNode = core.getCurrentVNode(history);
     const nextHistory = core.redoHistory(history);
 
     if (nextHistory.index === history.index) {
+      renderPatchLog(elements.patchLog, []);
       setStatusText(elements.statusText, fallbackMessages.noRedo);
       return;
     }
 
     const nextVNode = core.getCurrentVNode(nextHistory);
+    const patches = core.diff(currentVNode, nextVNode);
     history = nextHistory;
     renderBoth(nextVNode);
-    renderHistoryLog(elements.patchLog, "앞으로가기", previousIndex, nextHistory.index);
+    renderPatchLog(elements.patchLog, patches);
     syncButtons();
     setStatusText(elements.statusText, fallbackMessages.redoApplied);
   }

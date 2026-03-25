@@ -5,3 +5,4 @@ phases_saved/
 scripts_saved/
 tmp_merge_stash
 .tmp/
+.playwright-cli/

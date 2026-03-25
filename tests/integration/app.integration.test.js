@@ -14,7 +14,6 @@ import { applyPatches } from "../../src/core/patch.js";
 import { render } from "../../src/core/render.js";
 import {
   bindControls,
-  renderHistoryLog,
   renderPatchLog,
   renderVNodeTree,
   setStatusText,
@@ -91,16 +90,20 @@ test("integration flow supports undo and redo through bound controls", () => {
     {
       onPatch: () => {},
       onUndo: () => {
-        const previousIndex = history.index;
+        const currentVNode = getCurrentVNode(history);
         history = undoHistory(history);
+        const nextVNode = getCurrentVNode(history);
+        const patches = diff(currentVNode, nextVNode);
         syncFromHistory(fallbackMessages.undoApplied);
-        renderHistoryLog(elements.patchLog, "Undo", previousIndex, history.index);
+        renderPatchLog(elements.patchLog, patches);
       },
       onRedo: () => {
-        const previousIndex = history.index;
+        const currentVNode = getCurrentVNode(history);
         history = redoHistory(history);
+        const nextVNode = getCurrentVNode(history);
+        const patches = diff(currentVNode, nextVNode);
         syncFromHistory(fallbackMessages.redoApplied);
-        renderHistoryLog(elements.patchLog, "Redo", previousIndex, history.index);
+        renderPatchLog(elements.patchLog, patches);
       },
     },
   );
@@ -108,7 +111,7 @@ test("integration flow supports undo and redo through bound controls", () => {
   syncFromHistory("ready");
   elements.undoButton.click();
 
-  assert.match(elements.patchLog.textContent, /Undo/);
+  assert.match(elements.patchLog.textContent, /TEXT/);
   assert.equal(elements.statusText.textContent, fallbackMessages.undoApplied);
   assert.equal(elements.testRoot.value, '<section class="card" data-kind="article"><h2>Weekly menu</h2><p class="lead">Kimchi stew</p><ul><li>Egg roll</li><li>Seaweed soup</li></ul></section>');
   assert.equal(elements.undoButton.disabled, true);
@@ -116,7 +119,8 @@ test("integration flow supports undo and redo through bound controls", () => {
 
   elements.redoButton.click();
 
-  assert.match(elements.patchLog.textContent, /Redo/);
+  assert.match(elements.patchLog.textContent, /TEXT/);
+  assert.match(elements.patchLog.textContent, /CREATE/);
   assert.equal(elements.statusText.textContent, fallbackMessages.redoApplied);
   assert.equal(elements.redoButton.disabled, true);
 });
