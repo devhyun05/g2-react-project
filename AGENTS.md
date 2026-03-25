@@ -93,12 +93,9 @@ Codex에게 항상 다음 우선순위를 지키게 한다.
 ### VNode
 ```js
 {
-  nodeKind: "ELEMENT" | "TEXT",
   type: string,
   props: Record<string, string>,
-  children: VNode[],
-  text: string | null,
-  key: string | null
+  children: VNode[]
 }
 ```
 
@@ -120,11 +117,11 @@ render(vnode, container): Node
 diff(oldVNode, newVNode): Patch[]
 applyPatches(rootEl, patches): void
 
-createHistory(initialVNode): HistoryState
+createHistory(): HistoryState
 pushHistory(history, nextVNode): HistoryState
 undoHistory(history): HistoryState
 redoHistory(history): HistoryState
-getCurrentVNode(history): VNode
+getCurrentVNode(history): VNode | null
 ```
 
 ---
@@ -151,7 +148,7 @@ getCurrentVNode(history): VNode
 주의:
 - comment node는 무시 가능
 - style은 문자열 그대로 유지
-- key는 optional field지만 포맷 유지
+- TEXT 노드는 `type: "TEXT"`, `props.nodeValue`, `children: []` 계약 유지
 
 Codex에게 기대하는 결과:
 - 작은 helper 함수들로 분리된 구현
@@ -202,7 +199,7 @@ Codex에게 기대하는 결과:
 
 주의:
 - patch 적용 로직과 history 로직 분리
-- root replace가 필요한 경우 wrapper 전략 고려
+- path는 전달받은 `rootEl` 기준으로 유지
 - state mutation 최소화
 
 Codex에게 기대하는 결과:
