@@ -1,42 +1,38 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import { test } from "../helpers/testHarness.js";
 
 import { vNodeToDOM } from "../../src/core/vNodeToDOM.js";
-import { installFakeDom } from "../helpers/fakeDom.js";
+import { installDOMGlobals, serializeNode } from "../helpers/fakeDom.js";
+import { basicTree, replacedRootTree } from "../fixtures/sampleTrees.js";
 
-installFakeDom();
+test("vNodeToDOM builds DOM nodes with className mapped back to class", () => {
+  installDOMGlobals();
+  const node = vNodeToDOM(basicTree);
 
-test("vNodeToDOM converts className back to class and ignores event props", () => {
-  const domNode = vNodeToDOM({
-    type: "button",
-    props: {
-      className: "primary",
-      id: "save-button",
-      onClick: "ignored",
-    },
-    children: [
-      {
-        type: "TEXT",
-        props: { nodeValue: "Save" },
-        children: [],
-      },
-    ],
-  });
-
-  assert.equal(domNode.tagName, "BUTTON");
-  assert.equal(domNode.getAttribute("class"), "primary");
-  assert.equal(domNode.getAttribute("id"), "save-button");
-  assert.equal(domNode.getAttribute("onClick"), null);
-  assert.equal(domNode.childNodes[0].nodeValue, "Save");
+  assert.equal(node.getAttribute("class"), "card");
+  assert.equal(
+    serializeNode(node),
+    '<section class="card" data-kind="article"><h2>Weekly menu</h2><p class="lead">Kimchi stew</p><ul><li>Egg roll</li><li>Seaweed soup</li></ul></section>',
+  );
 });
 
-test("vNodeToDOM creates text nodes from props.nodeValue", () => {
-  const textNode = vNodeToDOM({
-    type: "TEXT",
-    props: { nodeValue: "0" },
-    children: [],
+test("vNodeToDOM preserves empty text nodes inside elements", () => {
+  installDOMGlobals();
+  const node = vNodeToDOM(replacedRootTree);
+
+  assert.equal(node.childNodes[0].nodeType, Node.TEXT_NODE);
+  assert.equal(node.childNodes[0].nodeValue, "");
+});
+
+test("vNodeToDOM ignores event props and returns null for null input", () => {
+  installDOMGlobals();
+  const node = vNodeToDOM({
+    type: "button",
+    props: { onClick: "ignored", className: "action" },
+    children: [{ type: "TEXT", props: { nodeValue: "Run" }, children: [] }],
   });
 
-  assert.equal(textNode.nodeType, Node.TEXT_NODE);
-  assert.equal(textNode.nodeValue, "0");
+  assert.equal(node.getAttribute("class"), "action");
+  assert.equal(node.getAttribute("onClick"), null);
+  assert.equal(vNodeToDOM(null), null);
 });
