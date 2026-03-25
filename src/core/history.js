@@ -30,10 +30,18 @@ function normalizeHistory(history) {
 }
 
 /**
+ * @param {any} [initialVNode]
  * @returns {{ entries: any[], index: number }}
  */
-export function createHistory() {
-  return { entries: [], index: -1 };
+export function createHistory(initialVNode) {
+  if (typeof initialVNode === "undefined") {
+    return { entries: [], index: -1 };
+  }
+
+  return {
+    entries: [cloneSnapshot(initialVNode)],
+    index: 0,
+  };
 }
 
 /**

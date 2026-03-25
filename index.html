@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>team2 virtual DOM simulator</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div class="hero-copy-block">
+          <p class="eyebrow">Cycle 1 Demo</p>
+          <h1>team2 virtual DOM simulator</h1>
+          <p class="hero-copy">
+            실제 DOM, 테스트 HTML, patch 결과를 한 화면에서 확인합니다.
+          </p>
+        </div>
+      </header>
+
+      <section class="status-bar" aria-live="polite">
+        <span id="status-text">초기화 중...</span>
+      </section>
+
+      <section class="control-bar panel" aria-label="플레이그라운드 컨트롤">
+        <div class="panel-header">
+          <h2>실행 버튼</h2>
+          <span>Patch / History</span>
+        </div>
+        <div class="panel-body controls">
+          <button id="patch-button" type="button">Patch</button>
+          <button id="undo-button" type="button">뒤로가기</button>
+          <button id="redo-button" type="button">앞으로가기</button>
+        </div>
+      </section>
+
+      <section class="playground-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Real DOM</h2>
+            <span>실제 영역</span>
+          </div>
+          <div class="panel-body">
+            <div id="real-root" class="surface">
+              <section class="card" data-kind="article">
+                <p class="badge">Actual DOM</p>
+                <h3>오늘의 메뉴</h3>
+                <p class="lead">김치볶음밥</p>
+                <ul class="items">
+                  <li>계란 추가</li>
+                  <li>국 제공</li>
+                </ul>
+              </section>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Test DOM</h2>
+            <span>테스트 HTML 코드</span>
+          </div>
+          <div class="panel-body">
+            <textarea
+              id="test-root"
+              class="surface code-editor"
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </article>
+      </section>
+
+      <section class="notes-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>VNode Tree</h2>
+            <span>Test DOM 기준</span>
+          </div>
+          <div class="panel-body">
+            <div id="vnode-tree" class="tree-surface">트리 정보를 준비 중입니다.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Patch Log</h2>
+            <span>변경된 부분</span>
+          </div>
+          <div class="panel-body">
+            <pre id="patch-log" class="patch-log">아직 patch가 실행되지 않았습니다.</pre>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="./src/ui/app.js"></script>
+  </body>
+</html>

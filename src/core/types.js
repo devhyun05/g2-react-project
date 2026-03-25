@@ -10,6 +10,10 @@ export const NODE_KIND = {
 };
 
 export const TEXT_NODE_TYPE = "TEXT";
+export const NODE_KIND = {
+  ELEMENT: "ELEMENT",
+  TEXT: "TEXT",
+};
 
 function normalizeProps(props) {
   return props && typeof props === "object" ? props : {};

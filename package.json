@@ -1,8 +1,8 @@
 {
-  "name": "g2-react-project",
-  "version": "0.1.0",
+  "name": "virtual-dom-simulator",
+  "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test ./tests/**/*.test.js"
+    "test": "node tests/run-tests.js"
   }
 }
