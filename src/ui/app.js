@@ -1,6 +1,5 @@
 import {
   bindControls,
-  renderHistoryLog,
   renderPatchLog,
   renderVNodeTree,
   setStatusText,
@@ -204,35 +203,39 @@ function createPlayground(elements, core) {
   }
 
   function handleUndo() {
-    const previousIndex = history.index;
+    const currentVNode = core.getCurrentVNode(history);
     const nextHistory = core.undoHistory(history);
 
     if (nextHistory.index === history.index) {
+      renderPatchLog(elements.patchLog, []);
       setStatusText(elements.statusText, fallbackMessages.noUndo);
       return;
     }
 
     const nextVNode = core.getCurrentVNode(nextHistory);
+    const patches = core.diff(currentVNode, nextVNode);
     history = nextHistory;
     renderBoth(nextVNode);
-    renderHistoryLog(elements.patchLog, "뒤로가기", previousIndex, nextHistory.index);
+    renderPatchLog(elements.patchLog, patches);
     syncButtons();
     setStatusText(elements.statusText, fallbackMessages.undoApplied);
   }
 
   function handleRedo() {
-    const previousIndex = history.index;
+    const currentVNode = core.getCurrentVNode(history);
     const nextHistory = core.redoHistory(history);
 
     if (nextHistory.index === history.index) {
+      renderPatchLog(elements.patchLog, []);
       setStatusText(elements.statusText, fallbackMessages.noRedo);
       return;
     }
 
     const nextVNode = core.getCurrentVNode(nextHistory);
+    const patches = core.diff(currentVNode, nextVNode);
     history = nextHistory;
     renderBoth(nextVNode);
-    renderHistoryLog(elements.patchLog, "앞으로가기", previousIndex, nextHistory.index);
+    renderPatchLog(elements.patchLog, patches);
     syncButtons();
     setStatusText(elements.statusText, fallbackMessages.redoApplied);
   }
