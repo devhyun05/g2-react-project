@@ -3,7 +3,7 @@ const TEXT_PROP = "nodeValue";
 const EVENT_PREFIX = "on";
 const OWN = Object.prototype.hasOwnProperty;
 
-const ENABLE_KEYED_CHILD_DIFF = false;
+const ENABLE_KEYED_CHILD_DIFF = true;
 const ENABLE_STABLE_KEY_INFERENCE = false;
 const PATH_SEPARATOR = "/";
 
@@ -89,7 +89,10 @@ function diffChildren(oldChildren, newChildren, path, patches) {
 function diffChildrenByKeys(oldChildren, newChildren, path, patches) {
   const oldIndexByKey = new Map();
   for (let i = 0; i < oldChildren.length; i += 1) {
-    oldIndexByKey.set(oldChildren[i].key, i);
+    const key = getVNodeKey(oldChildren[i]);
+    if (key != null) {
+      oldIndexByKey.set(key, i);
+    }
   }
 
   const newIndexToOldIndex = new Array(newChildren.length);
@@ -98,7 +101,7 @@ function diffChildrenByKeys(oldChildren, newChildren, path, patches) {
 
   for (let newIndex = 0; newIndex < newChildren.length; newIndex += 1) {
     const child = newChildren[newIndex];
-    const key = child.key;
+    const key = getVNodeKey(child);
     oldKeysInNew.add(key);
 
     const oldIndex = oldIndexByKey.has(key) ? oldIndexByKey.get(key) : -1;
@@ -110,7 +113,7 @@ function diffChildrenByKeys(oldChildren, newChildren, path, patches) {
   const lisSet = new Set(lis);
 
   for (let oldIndex = oldChildren.length - 1; oldIndex >= 0; oldIndex -= 1) {
-    const oldKey = oldChildren[oldIndex].key;
+    const oldKey = getVNodeKey(oldChildren[oldIndex]);
     if (!oldKeysInNew.has(oldKey) || !lisSet.has(oldIndex)) {
       path.push(oldIndex);
       walk(oldChildren[oldIndex], null, path, patches);
@@ -203,15 +206,33 @@ function isEventHandlerProp(key) {
   return key.startsWith(EVENT_PREFIX);
 }
 
+function getVNodeKey(vnode) {
+  if (!vnode || typeof vnode !== "object") {
+    return null;
+  }
+
+  if (vnode.key != null) {
+    return String(vnode.key);
+  }
+
+  const props = vnode.props && typeof vnode.props === "object" ? vnode.props : null;
+  if (props?.key != null) {
+    return String(props.key);
+  }
+
+  return null;
+}
+
 function isReusableKeyedChildren(children) {
   if (children.length === 0) return true;
 
   const keys = new Set();
   for (let i = 0; i < children.length; i += 1) {
     const child = children[i];
-    if (!child || child.key == null) return false;
-    if (keys.has(child.key)) return false;
-    keys.add(child.key);
+    const key = getVNodeKey(child);
+    if (key == null) return false;
+    if (keys.has(key)) return false;
+    keys.add(key);
   }
 
   return true;
