@@ -1,3 +1,5 @@
+https://github.com/devhyun05/g2-react-project/blob/main/README.md
+
 # 2조 Virtual DOM Simulator
 
 실제 DOM을 Virtual DOM으로 바꾸고, 두 Virtual DOM을 비교해서 바뀐 부분만 실제 DOM에 반영하는 흐름을 Vanilla JavaScript로 구현했다.
