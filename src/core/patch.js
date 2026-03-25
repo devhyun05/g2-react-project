@@ -85,7 +85,7 @@ export function getDOMNodeByPath(rootEl, path) {
  */
 function getParentNodeByPath(rootEl, path) {
   if (!rootEl || !isValidPath(path)) return null;
-  if (path.length === 0) return rootEl.parentNode;
+  if (path.length === 0) return rootEl;
   return getDOMNodeByPath(rootEl, path.slice(0, -1));
 }
 
@@ -101,18 +101,19 @@ function applyCreatePatch(rootEl, patch) {
   const vnode = patch.node;
 
   const newNode = createDOMNodeFromVNode(vnode);
-  const parent = getParentNodeByPath(rootEl, path);
-  if (!parent || !parent.childNodes || typeof parent.appendChild !== "function") return;
 
   if (path.length === 0) {
-    // root 경로 CREATE는 rootEl의 다음 형제로 삽입한다.
-    if (rootEl.parentNode && rootEl.nextSibling) {
-      rootEl.parentNode.insertBefore(newNode, rootEl.nextSibling);
-    } else if (rootEl.parentNode) {
-      rootEl.parentNode.appendChild(newNode);
+    // root 기준 경로에서는 rootEl의 자식으로 삽입한다.
+    if (rootEl.childNodes?.length && typeof rootEl.insertBefore === "function") {
+      rootEl.insertBefore(newNode, rootEl.childNodes[0]);
+    } else if (typeof rootEl.appendChild === "function") {
+      rootEl.appendChild(newNode);
     }
     return;
   }
+
+  const parent = getParentNodeByPath(rootEl, path);
+  if (!parent || !parent.childNodes || typeof parent.appendChild !== "function") return;
 
   const index = path[path.length - 1];
   const referenceNode = parent.childNodes[index] ?? null;
