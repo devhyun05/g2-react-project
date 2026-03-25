@@ -13,10 +13,12 @@
 
 코드 작성 전 아래 문서를 먼저 읽는다.
 
-- `README.md`
-- `AGENTS.md`
+1. `AGENTS.md`
+2. `README.md`
+3. `docs/development-plan.md`
+4. `docs/commit-convention.md`
 
-현재 저장소에는 `AGENTS.md`가 없으므로, 코딩 시작 전에 팀이 해당 문서를 추가/확정해야 한다.
+문서를 읽지 않은 상태에서 구현을 시작하지 않는다.
 
 ## Cycle Rules
 
