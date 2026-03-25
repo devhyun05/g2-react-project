@@ -25,6 +25,17 @@ function elementVNode(type, props = {}, children = []) {
   };
 }
 
+function keyedElementVNode(type, key, props = {}, children = []) {
+  return {
+    nodeKind: NODE_KIND.ELEMENT,
+    type,
+    props,
+    children,
+    text: null,
+    key,
+  };
+}
+
 test("diff handles no-change as no patches", () => {
   const node = elementVNode("div", { id: "a" }, [textVNode("x")]);
   const result = diff(node, node);
@@ -136,4 +147,44 @@ test("diff deep nested changes", () => {
       node: elementVNode("footer", { class: "x" }),
     },
   ]);
+});
+
+test("diff children with unique keys uses LIS keep and re-creates moves", () => {
+  const oldNode = elementVNode("div", {}, [
+    keyedElementVNode("li", "a", { value: "1" }),
+    keyedElementVNode("li", "b", { value: "2" }),
+    keyedElementVNode("li", "c", { value: "3" }),
+  ]);
+  const newNode = elementVNode("div", {}, [
+    keyedElementVNode("li", "b", { value: "2" }),
+    keyedElementVNode("li", "a", { value: "1" }),
+    keyedElementVNode("li", "c", { value: "3" }),
+  ]);
+
+  const result = diff(oldNode, newNode);
+  const kinds = result.map((p) => p.kind).sort();
+  assert.deepEqual(kinds, ["CREATE", "REMOVE"]);
+  assert.ok(result.some((p) => p.kind === "REMOVE" && p.path[0] === 1));
+  assert.ok(result.some((p) => p.kind === "CREATE" && p.path[0] === 0));
+});
+
+test("diff falls back to index-diff for non-unique keys", () => {
+  const oldNode = elementVNode("div", {}, [
+    keyedElementVNode("li", "dup", { value: "1" }),
+    keyedElementVNode("li", "dup", { value: "2" }),
+  ]);
+  const newNode = elementVNode("div", {}, [keyedElementVNode("li", "dup", { value: "2" })]);
+  const patches = diff(oldNode, newNode);
+  assert.deepEqual(patches[patches.length - 1], {
+    kind: "REMOVE",
+    path: [1],
+  });
+  assert.ok(patches.some((patch) => patch.kind === "SET_PROP"));
+});
+
+test("diff prunes unchanged subtree with signature cache", () => {
+  const subtree = elementVNode("section", { role: "stable" }, [textVNode("keep")]);
+  const oldNode = elementVNode("main", {}, [subtree]);
+  const newNode = elementVNode("main", {}, [subtree]);
+  assert.deepEqual(diff(oldNode, newNode), []);
 });
