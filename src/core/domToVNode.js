@@ -4,6 +4,10 @@ function getPropsFromAttributes(attributes) {
   const props = {};
 
   for (const attribute of attributes) {
+    /* onclick 이벤트 속성은 넣지 않도록... */
+    if (attribute.name.toLowerCase().startsWith("on")) {
+      continue;
+    } 
     const name = attribute.name === "class" ? "className" : attribute.name;
     props[name] = attribute.value;
   }
