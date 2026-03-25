@@ -1,4 +1,4 @@
-https://github.com/devhyun05/g2-react-project/blob/main/README.md
+<img width="1000" height="1000" alt="qrcode_325073523_b54e839c304fb738f5e960e7156751aa" src="https://github.com/user-attachments/assets/8555909a-53d0-42cd-837e-a3af4e167254" />
 
 # 2조 Virtual DOM Simulator
 
