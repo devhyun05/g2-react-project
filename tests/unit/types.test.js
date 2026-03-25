@@ -1,7 +1,6 @@
-import test from "node:test";
 import assert from "node:assert/strict";
-
 import { createTextVNode, createVNode } from "../../src/core/types.js";
+import { test } from "../helpers/testHarness.js";
 
 test("createVNode normalizes missing props and children to the contract defaults", () => {
   assert.deepEqual(createVNode("div", null, null), {

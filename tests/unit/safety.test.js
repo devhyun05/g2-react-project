@@ -59,7 +59,7 @@ test("hasUnsupportedReorder detects same children moved to a different order", (
   assert.equal(hasUnsupportedReorder(oldTree, newTree), true);
 });
 
-test("getPatchSafetyFallback requests full render for reorder, root replace, and heavy patch sets", () => {
+test("getPatchSafetyFallback requests full render for root replace and heavy patch sets only", () => {
   const reorderTree = {
     type: "ul",
     props: {},
@@ -77,10 +77,7 @@ test("getPatchSafetyFallback requests full render for reorder, root replace, and
     ],
   };
 
-  assert.equal(
-    getPatchSafetyFallback(reorderTree, reordered, []).useFullRender,
-    true,
-  );
+  assert.equal(getPatchSafetyFallback(reorderTree, reordered, []).useFullRender, false);
   assert.equal(
     getPatchSafetyFallback(basicTree, updatedTree, [{ kind: "REPLACE", path: [], node: updatedTree }])
       .useFullRender,

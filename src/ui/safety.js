@@ -191,13 +191,6 @@ export function hasUnsupportedReorder(oldVNode, newVNode) {
  * @returns {{ useFullRender: boolean, reason: string | null }}
  */
 export function getPatchSafetyFallback(oldVNode, newVNode, patches) {
-  if (hasUnsupportedReorder(oldVNode, newVNode)) {
-    return {
-      useFullRender: true,
-      reason: "Detected child reorder. Applied a full render instead of patching.",
-    };
-  }
-
   const replaceCount = patches.filter((patch) => patch?.kind === "REPLACE").length;
   const hasRootReplace = patches.some(
     (patch) => patch?.kind === "REPLACE" && Array.isArray(patch.path) && patch.path.length === 0,

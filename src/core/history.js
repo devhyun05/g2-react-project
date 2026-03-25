@@ -1,11 +1,12 @@
+import { cloneWithVNodeMetadata } from "./identity.js";
+
 /**
  * @param {any} value
  * @returns {any}
  */
 function cloneSnapshot(value) {
   if (typeof value === "undefined") return undefined;
-  if (typeof structuredClone === "function") return structuredClone(value);
-  return JSON.parse(JSON.stringify(value));
+  return cloneWithVNodeMetadata(value);
 }
 
 /**
