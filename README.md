@@ -84,6 +84,24 @@ pie showData
     "22:00 ~ 23:00 디버깅 및 전체 테스트" : 60
 ```
 
+## 테스트는 어떻게 했는지?
+
+테스트는 단순 확인용으로 붙인 게 아니라, 이 프로젝트의 품질 기준 자체로 사용했다.  
+특히 `AGENTS.md`에서 강조한 contract test와 edge case 대응을 실제 테스트 구조에 그대로 반영했다.
+
+<img width="1915" height="892" alt="image" src="https://github.com/user-attachments/assets/3975d923-c2b8-4ad9-97b9-8969ef2491d4" />
+
+테스트는 네 단계로 나눴다.
+
+| 분류 | 목적 |
+|---|---|
+| Contract Test | 공통 포맷과 계약이 깨지지 않는지 확인 |
+| Unit Test | 각 모듈이 자기 책임을 제대로 수행하는지 확인 |
+| Integration Test | patch, undo, redo까지 전체 흐름이 연결되는지 확인 |
+| Concurrency-like / Load Test | 빠른 연속 실행, 큰 입력, 반복 churn에서도 안정적인지 확인 |
+
+추가로 외부 라이브러리 없이 바로 돌릴 수 있도록 경량 테스트 러너와 fake DOM 환경도 같이 만들었다.
+
 ## 팀 구성
 
 | 담당 | 역할 | 맡은 파트 |
@@ -151,24 +169,6 @@ undo는 index를 뒤로, redo는 앞으로 옮긴다. 그리고 undo 이후 새 
 | 초기 로드 | real DOM을 읽어 첫 VNode를 만들고, test 영역과 history를 초기화한다 |
 | Patch | 이전 VNode와 새 VNode를 비교해 patch를 만들고 real DOM에 반영한다 |
 | Undo / Redo | history index를 이동한 뒤 현재 snapshot을 기준으로 다시 렌더링한다 |
-
-## 테스트는 어떻게 했는지?
-
-테스트는 단순 확인용으로 붙인 게 아니라, 이 프로젝트의 품질 기준 자체로 사용했다.  
-특히 `AGENTS.md`에서 강조한 contract test와 edge case 대응을 실제 테스트 구조에 그대로 반영했다.
-
-<img width="1915" height="892" alt="image" src="https://github.com/user-attachments/assets/3975d923-c2b8-4ad9-97b9-8969ef2491d4" />
-
-테스트는 네 단계로 나눴다.
-
-| 분류 | 목적 |
-|---|---|
-| Contract Test | 공통 포맷과 계약이 깨지지 않는지 확인 |
-| Unit Test | 각 모듈이 자기 책임을 제대로 수행하는지 확인 |
-| Integration Test | patch, undo, redo까지 전체 흐름이 연결되는지 확인 |
-| Concurrency-like / Load Test | 빠른 연속 실행, 큰 입력, 반복 churn에서도 안정적인지 확인 |
-
-추가로 외부 라이브러리 없이 바로 돌릴 수 있도록 경량 테스트 러너와 fake DOM 환경도 같이 만들었다.
 
 ## 품질 검증 포인트
 
