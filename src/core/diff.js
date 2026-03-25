@@ -71,7 +71,7 @@ function diffProps(oldNode, newNode, path, patches) {
     const oldValue = oldProps[key];
     const newValue = newProps[key];
     if (oldValue !== newValue) {
-      patches.push({ kind: "SET_PROP", path: path.slice(), key, value: newValue });
+      patches.push({ kind: "SET_PROP", path: path.slice(), key, value: String(newValue ?? "") });
     }
   }
 
@@ -79,7 +79,7 @@ function diffProps(oldNode, newNode, path, patches) {
     const key = newKeys[i];
     if (isEventHandlerProp(key)) continue;
     if (!OWN.call(oldProps, key)) {
-      patches.push({ kind: "SET_PROP", path: path.slice(), key, value: newProps[key] });
+      patches.push({ kind: "SET_PROP", path: path.slice(), key, value: String(newProps[key] ?? "") });
     }
   }
 }
