@@ -60,21 +60,17 @@ function createDOMNodeFromVNode(vnode) {
 }
 
 /**
- * rootEl은 wrapper, path는 wrapper 내부의 root(firstChild)를 기준으로 탐색한다.
- * path=[] 인 경우 wrapper의 firstChild를 반환한다.
+ * path는 전달받은 rootEl 자체를 기준으로 탐색한다.
+ * path=[] 인 경우 rootEl을 반환한다.
  * @param {Element} rootEl
  * @param {number[]} path
  * @returns {Node|null}
  */
 export function getDOMNodeByPath(rootEl, path) {
-  if (!rootEl || !Array.isArray(path)) return null;
+  if (!rootEl || !isValidPath(path)) return null;
 
-  let current = rootEl.firstChild;
-  if (!current) return null;
-  if (path.length === 0) return current;
-
+  let current = rootEl;
   for (const index of path) {
-    if (!Number.isInteger(index) || index < 0) return null;
     if (!current.childNodes || index >= current.childNodes.length) return null;
     current = current.childNodes[index];
   }
@@ -88,8 +84,8 @@ export function getDOMNodeByPath(rootEl, path) {
  * @returns {Node|null}
  */
 function getParentNodeByPath(rootEl, path) {
-  if (!rootEl || !Array.isArray(path)) return null;
-  if (path.length === 0) return rootEl;
+  if (!rootEl || !isValidPath(path)) return null;
+  if (path.length === 0) return rootEl.parentNode;
   return getDOMNodeByPath(rootEl, path.slice(0, -1));
 }
 
@@ -105,23 +101,22 @@ function applyCreatePatch(rootEl, patch) {
   const vnode = patch.node;
 
   const newNode = createDOMNodeFromVNode(vnode);
+  const parent = getParentNodeByPath(rootEl, path);
+  if (!parent || !parent.childNodes || typeof parent.appendChild !== "function") return;
 
   if (path.length === 0) {
-    const first = rootEl.firstChild;
-    if (first) {
-      rootEl.insertBefore(newNode, first);
-    } else {
-      rootEl.appendChild(newNode);
+    // root 경로 CREATE는 rootEl의 다음 형제로 삽입한다.
+    if (rootEl.parentNode && rootEl.nextSibling) {
+      rootEl.parentNode.insertBefore(newNode, rootEl.nextSibling);
+    } else if (rootEl.parentNode) {
+      rootEl.parentNode.appendChild(newNode);
     }
     return;
   }
 
-  const parent = getParentNodeByPath(rootEl, path);
-  if (!parent || !parent.childNodes) return;
-
   const index = path[path.length - 1];
   const referenceNode = parent.childNodes[index] ?? null;
-  if (referenceNode) {
+  if (referenceNode && typeof parent.insertBefore === "function") {
     parent.insertBefore(newNode, referenceNode);
   } else {
     parent.appendChild(newNode);
@@ -157,16 +152,6 @@ function applyReplacePatch(rootEl, patch) {
 
   if (target && typeof target.replaceWith === "function") {
     target.replaceWith(newNode);
-    return;
-  }
-
-  if (path.length === 0) {
-    const first = rootEl.firstChild;
-    if (first) {
-      rootEl.replaceChild(newNode, first);
-    } else {
-      rootEl.appendChild(newNode);
-    }
   }
 }
 
