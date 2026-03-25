@@ -1,4 +1,4 @@
-import { NODE_KIND, VNODE_TEXT_PROP } from "./types.js";
+import { NODE_KIND } from "./types.js";
 
 const OWN = Object.prototype.hasOwnProperty;
 const EVENT_PREFIX = "on";
@@ -92,12 +92,12 @@ function getNodeKind(vnode) {
 
 function getTextValue(vnode) {
   const props = vnode && vnode.props;
-  if (props != null && OWN.call(props, VNODE_TEXT_PROP)) {
-    const value = props[VNODE_TEXT_PROP];
+  if (props != null && OWN.call(props, "nodeValue")) {
+    const value = props.nodeValue;
     if (value === null || value === undefined) return "";
     return String(value);
   }
-  return vnode && OWN.call(vnode, "text") && vnode.text != null ? String(vnode.text) : "";
+  return "";
 }
 
 function isEventHandlerProp(key) {
